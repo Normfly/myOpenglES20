@@ -4,13 +4,17 @@ import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 
 public class GLSurfView extends GLSurfaceView {
+    private ScaleGestureDetector mScaleGestureDetector;
 
     private final GLRenderer mRenderer;
 
     public GLSurfView(Context context) {
         super(context);
+
+        mScaleGestureDetector = new ScaleGestureDetector(context, new ScaleListener());
 
         // Create an OpenGL ES 2.0 context.
         setEGLContextClientVersion(2);
@@ -25,6 +29,7 @@ public class GLSurfView extends GLSurfaceView {
         // Request focus, otherwise key/button won't react
         this.requestFocus();
         this.setFocusableInTouchMode(true);
+
     }
 
     @Override
@@ -41,7 +46,10 @@ public class GLSurfView extends GLSurfaceView {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+
+        mScaleGestureDetector.onTouchEvent(e);
         mRenderer.processTouchEvent(e);
+
         return true;
     }
 
@@ -56,4 +64,16 @@ public class GLSurfView extends GLSurfaceView {
         mRenderer.ProcessKeyDown(keyCode, event);
         return super.onKeyDown(keyCode, event);
     }
+
+
+
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+        @Override
+        public boolean onScale(ScaleGestureDetector scaleGestureDetector){
+            mRenderer.scale *= scaleGestureDetector.getScaleFactor();
+
+            return true;
+        }
+    }
+
 }

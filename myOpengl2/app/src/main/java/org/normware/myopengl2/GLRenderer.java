@@ -26,6 +26,8 @@ public class GLRenderer implements Renderer {
 	GLText glText = new GLText();
 
 	Vector3f cameraAngles = new Vector3f(0f, 0f, 0f);
+	float scale = 1.0f;
+	PointF oldTouch = new PointF();
 	public boolean perspectiveView = true;//perspective or ortho
 	PointF lastScreenTouch = new PointF();
 
@@ -184,6 +186,7 @@ public class GLRenderer implements Renderer {
                 deltaY = currentY - lastScreenTouch.y;
                 cameraAngles.x -= deltaY * TOUCH_SCALE_FACTOR;
                 cameraAngles.y -= deltaX * TOUCH_SCALE_FACTOR;
+                break;
         }
         // Save current x, y
         lastScreenTouch = new PointF(currentX, currentY);
@@ -202,7 +205,7 @@ public class GLRenderer implements Renderer {
 		}
 
 		//set camera looking along z axis, good for 2D games
-		Matrix.setLookAtM(globals.cameraViewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+		Matrix.setLookAtM(globals.cameraViewMatrix, 0, 0f, 0f, scale, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
         globals.viewMatrix = globals.cameraViewMatrix.clone();
 
 		//rotate camera
