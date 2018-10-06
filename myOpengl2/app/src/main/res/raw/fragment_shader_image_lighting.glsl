@@ -6,19 +6,20 @@ varying vec3 v_Normal;          // Interpolated normal for this fragment.
 varying vec4 v_Color;           // light color and ambient light brightness
 varying float v_alpha;          // used for opacity
 
+
 uniform sampler2D u_texture;
 uniform vec4 u_LightPos;        // The position of the light in eye space. 4th position is brightness
-
+//uniform vec3 u_LightDir;        // The direction of the light
 
 void main()
 {
-    // Will be used for attenuation.
+        // Will be used for attenuation.
         vec3 lightPos = vec3(u_LightPos.x, u_LightPos.y, u_LightPos.z);
         float brightness = 1.0 - u_LightPos.w;
-        float distance = length(lightPos - v_Position);
+        float distance = length(lightPos - v_Position);// distance between light position and vertex
 
         // Get a lighting direction vector from the light to the vertex.
-        vec3 lightVector = normalize(lightPos - v_Position);
+        vec3 lightVector = normalize(lightPos + v_Position);
 
         // Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
         // pointing in the same direction then it will get max illumination.

@@ -19,13 +19,15 @@ public class GLRenderer implements Renderer {
 
 	//3d models
 	RectangleModel modelRec = new RectangleModel(new PointF(20f, 20f), true, false, true);
-	Model3d model = new Model3d("test", true, true, 1.0f,
-				new PosAngScale(0f, 0f, -2f,//location
+	Model3d keep = new Model3d("test", true, true, 1.0f,
+				new PosAngScale(0f, 0f, 0f,//location
 								0f, 0f, 0f,//rotations
-								1f, 1f, 1f));//size
+								.2f, .2f, .2f));//size
 	GLText glText = new GLText();
+	MapTile grassTile[] = new MapTile[1];
 
-	Vector3f cameraAngles = new Vector3f(0f, 0f, 0f);
+
+	Vector3f cameraAngles = new Vector3f(10f, 0f, 0f);
 	float scale = 1.0f;
 	PointF oldTouch = new PointF();
 	public boolean perspectiveView = true;//perspective or ortho
@@ -101,10 +103,13 @@ public class GLRenderer implements Renderer {
 		//load textures
 		GLES20.glGenTextures(textureIDs.length, textureIDs, 0);  // Generate texture-ID array
 		modelRec.LoadTexture(mContext, R.drawable.ic_launcher, texturePntr++);
-		model.LoadTexture(mContext, "duffplane", texturePntr++);
+		keep.LoadTexture(mContext, "keep", texturePntr++);
 		glText.LoadFont(mContext, Color.argb(255,255,255,255),
 												Color.argb(0,0,0,0),
 												true, .5f, texturePntr++);
+
+		grassTile[0] = new MapTile();
+		grassTile[0].LoadTile(mContext, R.raw.grass, texturePntr++);
 
 		// Set the clear color to black
 		GLES20.glClearColor(0.0f, 0.5f, 0.5f, 1);
@@ -168,11 +173,16 @@ public class GLRenderer implements Renderer {
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
 		//draw 3d objects
-		modelRec.Draw(globals.viewProjMatrix, new Vector3f(0f, 0f, -20f), 1);
+        //draw map tiles
+        grassTile[0].Draw(globals);
+
+		//modelRec.Draw(globals.viewProjMatrix, new Vector3f(0f, 0f, -20f), new Vector3f(-90f, 0f, 0f), 1f);
 		//rotate model for testing
-		model.position.angles.Add3f(.5f, .5f, .5f);
-		model.Draw(globals);
-		glText.Draw(globals.orthoMatrix, testText, new PointF(0f, 0f));
+		//keep.position.angles.Add3f(0f, .5f, 0f);
+        //keep.position.location.y = 2f;
+		keep.Draw(globals);
+        glText.Draw(globals.orthoMatrix, testText, new PointF(0f, 0f));
+
 	}
 
 	public void processTouchEvent(MotionEvent event) {
@@ -205,7 +215,7 @@ public class GLRenderer implements Renderer {
 		}
 
 		//set camera looking along z axis, good for 2D games
-		Matrix.setLookAtM(globals.cameraViewMatrix, 0, 0f, 0f, scale, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+		Matrix.setLookAtM(globals.cameraViewMatrix, 0, 0f, 0f, 1f + scale, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
         globals.viewMatrix = globals.cameraViewMatrix.clone();
 
 		//rotate camera
@@ -238,23 +248,28 @@ public class GLRenderer implements Renderer {
 
 		switch (keyCode){
 			case KeyEvent.KEYCODE_DPAD_LEFT:
-				model.position.location.x -= .1f;
+				keep.position.location.x -= .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_RIGHT:
-				model.position.location.x += .1f;
+				keep.position.location.x += .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_UP:
-				model.position.location.y += .1f;
+				keep.position.location.y += .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_DOWN:
-				model.position.location.y -= .1f;
+				keep.position.location.y -= .1f;
 				break;
 			case 69://minus
-				model.position.location.z -= 1f;
+				keep.position.location.z -= 1f;
 				break;
 			case 70://addition
-				model.position.location.z += 1f;
+				keep.position.location.z += 1f;
 				break;
+            case KeyEvent.KEYCODE_PERIOD:
+                keep.position.angles.y += .1f;
+                break;
+            case KeyEvent.KEYCODE_COMMA:
+                keep.position.angles.y -= .1f;
 			case KeyEvent.KEYCODE_P:
 				perspectiveView = !perspectiveView;
 				break;

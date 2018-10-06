@@ -7,7 +7,9 @@ import android.graphics.PointF;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.opengl.Matrix;
+import android.widget.Toast;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -31,7 +33,6 @@ public class RectangleModel {
     public boolean transparent = true;
     public PointF size;
     public boolean lighted;
-    public PosAngScale posAngScale = new PosAngScale(0, 0, 0, 0, 0, 0, 1, 1, 1);
 
     private float[] vertices = {  // Vertices for the square
             -1.0f, -1.0f,  0.0f,  // 0. left-bottom
@@ -56,6 +57,18 @@ public class RectangleModel {
         if (centered){
             // centered vertices
             vertices = new float[]{
+                    -size.x/2, 0f, size.y/2,//top left
+                    -size.x/2, 0f, -size.y/2,//bottom left
+                    size.x/2, 0f, -size.y/2,//bottom right
+                    size.x/2, 0f, size.y/2};//top right
+        }else{// left/top = 0,0
+            vertices = new float[]{
+                    0f, 0f, size.y, // 0. top left
+                    0f, 0f, 0f, // 1. bottom left
+                    size.x, 0f, 0f, // 2. bottom right
+                    size.x, 0f, size.y};  // 3 top right
+            /*// centered vertices
+            vertices = new float[]{
                     -size.x/2, size.y/2, 0,//top left
                     -size.x/2, -size.y/2, 0,//bottom left
                     size.x/2, -size.y/2, 0,//bottom right
@@ -65,7 +78,7 @@ public class RectangleModel {
                     0, size.y, 0, // 0. top left
                     0, 0, 0, // 1. bottom left
                     size.x, 0, 0, // 2. bottom right
-                    size.x, size.y,0};  // 3 top right
+                    size.x, size.y,0};  // 3 top right*/
         }
 
         this.transparent = transparent;
@@ -103,7 +116,7 @@ public class RectangleModel {
     }
 
     // Render this shape
-    public void Draw(float[] viewMatrix, Vector3f position, float scale) {
+    public void Draw(float[] viewMatrix, Vector3f position, Vector3f angles, float scale) {
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
@@ -113,7 +126,11 @@ public class RectangleModel {
         //translate and scale
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
         Matrix.scaleM(modelMatrix, 0, scale, scale, 1);//scale
-        Matrix.translateM(modelMatrix, 0, position.x, position.y, position.z);//move
+        Matrix.translateM(modelMatrix, 0, position.x, -position.y, position.z);//move
+        //rotate
+        Matrix.rotateM(modelMatrix, 0, angles.x, 1f, 0f, 0f);
+        Matrix.rotateM(modelMatrix, 0, angles.y, 0f, 1f, 0f);
+        Matrix.rotateM(modelMatrix, 0, angles.z, 0f, 0f, 1f);
 
         //choose ortho or perspective view matrix
         Matrix.multiplyMM(projectionMatrix, 0, viewMatrix, 0, modelMatrix, 0);//projection matrix
@@ -204,9 +221,12 @@ public class RectangleModel {
 
         this.texCoords = texCoords;
 
-        Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), iD);
-
-        LoadTexture(context, bitmap, textureIndex);
+        try{
+            Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), iD);
+            LoadTexture(context, bitmap, textureIndex);
+        }catch (Exception e){
+            Toast.makeText(context, "Unable to load image", Toast.LENGTH_LONG);
+        }
     }
 
 

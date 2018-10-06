@@ -32,6 +32,9 @@ import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
 import static org.normware.myopengl2.Constants.INPUT_BUFFER_SIZE;
 
 public class Model {
+    // blender OBJ export y up, write normals, include UVs, write materials, triangulate faces (extrude faces, then remove 0,0 vt's)
+
+
     private FloatBuffer vertexBuffer;  // Buffer for vertex-array
     private FloatBuffer normalBuffer; // Buffer for normals array
     private FloatBuffer texBuffer; // Buffer for textures
@@ -106,7 +109,9 @@ public class Model {
                 }else if (line.startsWith("vt ")){
                     PointF texture = new PointF(Float.parseFloat(currentLine[1]),
                                                     Float.parseFloat(currentLine[2]));
-                    textures.add(texture);
+                    if (texture.x != 0.0f && texture.y != 0.0f){
+                        textures.add(texture);
+                    }
                 }else if (line.startsWith("vn ")) {
                     Vector3f normal = new Vector3f(Float.parseFloat(currentLine[1]),
                             Float.parseFloat(currentLine[2]),
@@ -270,7 +275,7 @@ public class Model {
                                                 modelPos.scales.y,
                                                 modelPos.scales.z);//scale
         Matrix.translateM(modelMatrix, 0, modelPos.location.x,
-                                                    modelPos.location.y,
+                                                    -modelPos.location.y,
                                                     modelPos.location.z);//move
         //rotate
         Matrix.rotateM(modelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
@@ -284,8 +289,9 @@ public class Model {
 
         GLES20.glFrontFace(GLES20.GL_CCW);    // Front face in counter-clockwise orientation
         GLES20.glEnable(GLES20.GL_TEXTURE_2D);
-        GLES20.glEnable(GLES20.GL_CULL_FACE);//draw front faces only
-        GLES20.glEnable(GLES20.GL_FRONT);//draw front faces only
+        GLES20.glEnable(GLES20.GL_FRONT_AND_BACK);
+        //GLES20.glEnable(GLES20.GL_CULL_FACE);//draw front faces only
+        //GLES20.glEnable(GLES20.GL_FRONT);//draw front faces only
         //GLES20.glDisable(GLES20.GL_BACK);
         GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -306,6 +312,11 @@ public class Model {
         // Apply the projection and view transformation
         GLES20.glUniformMatrix4fv(uMVPmatrix, 1, false, finalMatrix, 0);
 
+        // opacity
+        int aAlpha = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_alpha");
+        GLES20.glEnableVertexAttribArray(aAlpha);
+        GLES20.glVertexAttrib1f(aAlpha, alpha);
+
         // directional lighting direction, 4th is brightness
         int aColor = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_Color");
         // Apply the color to the shader programs
@@ -316,11 +327,11 @@ public class Model {
         }
         GLES20.glVertexAttrib4fv(aColor, ambientLight, 0);
 
-        // opacity
-        int aAlpha = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_alpha");
-        GLES20.glEnableVertexAttribArray(aAlpha);
-        GLES20.glVertexAttrib1f(aAlpha, alpha);
+        //light direction
+        //int uLightDir = GLES20.glGetUniformLocation(GraphicTools.sp_ImageLighting, "u_LightDir");
+        //GLES20.glUniform3fv(uLightDir, 1, globals.lightDirection, 0);
 
+        //light position
         int uLightPos = GLES20.glGetUniformLocation(GraphicTools.sp_ImageLighting, "u_LightPos");
         GLES20.glUniform4fv(uLightPos, 1, globals.lightPosition, 0);
 
