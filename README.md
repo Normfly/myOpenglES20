@@ -1,6 +1,6 @@
 # myOpenglES20
 Opengl ES 2.0 starter. Loads OBJ file / draw rectangle / draw text / lighted texture shaders
-The OBJ loader only supports a single texture. Each vertex can only have one UV texture coordinate. So, adding extruding faces might be neccesary with complicated texture wrapping.
+The OBJ loader only supports a single texture. I used draw straight from vertex array instead of from a indexed array, so that uv coordinates from OBJ file from Blender maps coorectly.
 
 Blender export options 
 y up
