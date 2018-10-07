@@ -45,7 +45,7 @@ public class GLText {
         //square = new Square(globalVars, new Vector2f((float)bounds.width() / 100, (float)bounds.height() / 100), transparent);// new square, sized based on text bounds
         //rectangleModel = new RectangleModel(new PointF((float)bitmap.getWidth() / 100, (float)bitmap.getHeight() / 100),
         //        transparent, false, false);
-        rectangleModel = new RectangleModel(new PointF(size, size), transparent, false, false);
+        rectangleModel = new RectangleModel(new PointF(size, size), transparent, false, false, true);
 
         float[] texCoords = {
                 0.005f, 0.0f,  // A. left-bottom
@@ -141,7 +141,7 @@ public class GLText {
             rect.setRight(width);
             rectangleModel.UpdateTextureCoords(rect.getRect());
             position.x += size;
-            rectangleModel.Draw(viewMatrix, new Vector3f(position.x, -position.y, position.z), new Vector3f(-90f, 0f, 0f), 1f);
+            rectangleModel.Draw(viewMatrix, new Vector3f(position.x, -position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
         }
     }
 }

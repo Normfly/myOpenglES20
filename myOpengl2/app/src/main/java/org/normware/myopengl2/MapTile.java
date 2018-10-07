@@ -17,7 +17,7 @@ public class MapTile {
     public void LoadTile(Context context,  int image, int textureIndex){
         this.context = context;
         this.image = image;
-        model = new RectangleModel(new PointF(1f, 1f), false, true, true);
+        model = new RectangleModel(new PointF(1f, 1f), false, true, true, false);
         model.LoadTexture(context, image,textureIndex);
         angles.x = 0f;//rotate a bit off level
         location.y = 0f;

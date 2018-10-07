@@ -18,16 +18,20 @@ public class GLRenderer implements Renderer {
 	public Globals globals = new Globals();
 
 	//3d models
-	RectangleModel modelRec = new RectangleModel(new PointF(20f, 20f), true, false, true);
-	Model3d keep = new Model3d("test", true, true, 1.0f,
-				new PosAngScale(0f, 0f, 0f,//location
+	RectangleModel modelRec = new RectangleModel(new PointF(20f, 20f), true, false, true, true);
+	/*Model3d keep = new Model3d("test", true, true, 1.0f,
+				new PosAngScale(0f, 5f, 0f,//location
 								0f, 0f, 0f,//rotations
-								.2f, .2f, .2f));//size
+								.2f, .2f, .2f));//size*/
+    Model3d keep = new Model3d("test", true, true, 1.0f,
+            new PosAngScale(0f, 0f, -5f,//location
+                    0f, 0f, 0f,//rotations
+                    1f, 1f, 1f));//size
 	GLText glText = new GLText();
 	MapTile grassTile[] = new MapTile[1];
 
 
-	Vector3f cameraAngles = new Vector3f(10f, 0f, 0f);
+	Vector3f cameraAngles = new Vector3f(0f, 0f, 0f);
 	float scale = 1.0f;
 	PointF oldTouch = new PointF();
 	public boolean perspectiveView = true;//perspective or ortho
@@ -103,7 +107,7 @@ public class GLRenderer implements Renderer {
 		//load textures
 		GLES20.glGenTextures(textureIDs.length, textureIDs, 0);  // Generate texture-ID array
 		modelRec.LoadTexture(mContext, R.drawable.ic_launcher, texturePntr++);
-		keep.LoadTexture(mContext, "keep", texturePntr++);
+		keep.LoadTexture(mContext, "cube", texturePntr++);
 		glText.LoadFont(mContext, Color.argb(255,255,255,255),
 												Color.argb(0,0,0,0),
 												true, .5f, texturePntr++);
@@ -174,12 +178,11 @@ public class GLRenderer implements Renderer {
 
 		//draw 3d objects
         //draw map tiles
-        grassTile[0].Draw(globals);
+        //grassTile[0].Draw(globals);
 
-		//modelRec.Draw(globals.viewProjMatrix, new Vector3f(0f, 0f, -20f), new Vector3f(-90f, 0f, 0f), 1f);
+		modelRec.Draw(globals.viewProjMatrix, new Vector3f(0f, 0f, -20f), new Vector3f(0f, 0f, 0f), 1f);
 		//rotate model for testing
-		//keep.position.angles.Add3f(0f, .5f, 0f);
-        //keep.position.location.y = 2f;
+		keep.position.angles.Add3f(1f, 0f, 0f);
 		keep.Draw(globals);
         glText.Draw(globals.orthoMatrix, testText, new PointF(0f, 0f));
 
@@ -204,6 +207,8 @@ public class GLRenderer implements Renderer {
 
 	public void UpdateWorldMatrix(){
 
+	    //testText = Float.toString(keep.position.location.y);
+
 		float[] tempMatrix = new float[16];
 
 		// Clear our matrices
@@ -215,7 +220,7 @@ public class GLRenderer implements Renderer {
 		}
 
 		//set camera looking along z axis, good for 2D games
-		Matrix.setLookAtM(globals.cameraViewMatrix, 0, 0f, 0f, 1f + scale, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+		Matrix.setLookAtM(globals.cameraViewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0.0f);
         globals.viewMatrix = globals.cameraViewMatrix.clone();
 
 		//rotate camera
@@ -229,10 +234,10 @@ public class GLRenderer implements Renderer {
 
 		// Setup our screen width and height for ortho projection
 		//Matrix.orthoM(orthoMatrix, 0, -mScreenWidth/2, mScreenWidth/2, -mScreenHeight/2, mScreenHeight/2, 0, 10);
-		Matrix.orthoM(globals.orthoMatrix, 0, 0f, 5f, -5f, 0f, -1f, 100f);
+		Matrix.orthoM(globals.orthoMatrix, 0, 0f, 5f * scale, -5f * scale, 0f, -1f, 100f);
 
 		// Setup perspective projection matrix
-		Matrix.perspectiveM(globals.perspectiveMatrix, 0, 45f, 1f, 1f, 100f);
+		Matrix.perspectiveM(globals.perspectiveMatrix, 0, 45f * scale, 1f, 1f, -100f);
 		tempMatrix = new float[16];
 		Matrix.multiplyMM(tempMatrix, 0, globals.perspectiveMatrix, 0, globals.cameraViewMatrix, 0);//add camera matrix to perspective
         globals.perspectiveMatrix = tempMatrix.clone();
@@ -254,10 +259,10 @@ public class GLRenderer implements Renderer {
 				keep.position.location.x += .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_UP:
-				keep.position.location.y += .1f;
+				keep.position.location.y += 1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_DOWN:
-				keep.position.location.y -= .1f;
+				keep.position.location.y -= 1f;
 				break;
 			case 69://minus
 				keep.position.location.z -= 1f;
@@ -277,6 +282,7 @@ public class GLRenderer implements Renderer {
 	}
 
 	public void ProcessKeyDown(int KeyCode, KeyEvent event){
+	    testText = "";
         testText += (char) event.getUnicodeChar();
     }
 }

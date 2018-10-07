@@ -8,6 +8,7 @@ import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.support.annotation.NonNull;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,6 +50,9 @@ public class Model {
     public boolean transparent;
     public boolean lighted;
     public float alpha;
+
+    /*private int texPointer = 0;
+    private int normalsPointer = 0;*/
 
     // load OBJ file (must include)
     // position/texture/normals
@@ -95,12 +99,15 @@ public class Model {
         float[] textureArray = null;
         short[] indicesArray = null;
         String mtlFilename = null;
+        List<String> facesArray = new ArrayList<>();
 
         try{
 
             while(true){
                 line = reader.readLine();
+                if (line == null){break;}
                 String[] currentLine = line.split(" ");
+
                 if (line.startsWith("v ")){
                     Vector3f vertex = new Vector3f(Float.parseFloat(currentLine[1]),
                                                     Float.parseFloat(currentLine[2]),
@@ -110,7 +117,7 @@ public class Model {
                     PointF texture = new PointF(Float.parseFloat(currentLine[1]),
                                                     Float.parseFloat(currentLine[2]));
                     if (texture.x != 0.0f && texture.y != 0.0f){
-                        textures.add(texture);
+                        textures.add(texture);// add texture coordinates as long as they are not 0.0 for unassigned texture coordinates
                     }
                 }else if (line.startsWith("vn ")) {
                     Vector3f normal = new Vector3f(Float.parseFloat(currentLine[1]),
@@ -120,31 +127,30 @@ public class Model {
                 }else if(line.startsWith("mtllib")){
                     mtlFilename = currentLine[1];
                 }else if (line.startsWith("f ")){
-                    textureArray = new float[vertices.size() * 2];
-                    normalsArray = new float[vertices.size() * 3];
-                    break;
+                    facesArray.add(line);
                 }
             }
 
-            while(line != null){
-                if (!line.startsWith("f ")){
-                    line = reader.readLine();
-                    continue;
-                }
-                String[] currentLine = line.split(" ");
-                String[] vertex1 = currentLine[1].split("/");
-                String[] vertex2 = currentLine[2].split("/");
-                String[] vertex3 = currentLine[3].split("/");
+            textureArray = new float[(facesArray.size() * 3) * 2];//3 floats / 2 uv coordinates
+            normalsArray = new float[facesArray.size() * 3 * 3];//3 floats / 3 indicies per face
 
-                processVertex(vertex1, indices, textures, normals, textureArray, normalsArray);
-                processVertex(vertex2, indices, textures, normals, textureArray, normalsArray);
-                processVertex(vertex3, indices, textures, normals, textureArray, normalsArray);
-                line = reader.readLine();
+            for (int face = 0; face < facesArray.size(); face++){
+                line = facesArray.get(face);
+                if (line.startsWith("f ")) {
+                    String[] currentLine = line.split(" ");
+                    String[] vertex1 = currentLine[1].split("/");
+                    String[] vertex2 = currentLine[2].split("/");
+                    String[] vertex3 = currentLine[3].split("/");
+
+                    processVertex(vertex1, indices, textures, normals, textureArray, normalsArray);
+                    processVertex(vertex2, indices, textures, normals, textureArray, normalsArray);
+                    processVertex(vertex3, indices, textures, normals, textureArray, normalsArray);
+                }
             }
             reader.close();
 
         } catch (Exception e){
-
+            Toast.makeText(context, "Error loading 3d OBJ model", Toast.LENGTH_LONG);
         }
 
         verticesArray = new float[vertices.size() * 3];
@@ -161,6 +167,15 @@ public class Model {
             int ii = indices.get(i);
             short s = (short)ii;
             indicesArray[i] = s;//indices.get(i);
+        }
+
+        // Build non indexed vertex array
+        float[] tempArray = verticesArray;
+        verticesArray = new float[indicesArray.length * 3];//3 floats x,y,z per index
+        for (int i = 0; i < indicesArray.length; i++){//once per x,y,z
+            verticesArray[i * 3] = vertices.get(indices.get(i)).x;
+            verticesArray[(i * 3) + 1] = vertices.get(indices.get(i)).y;
+            verticesArray[(i * 3) + 2] = vertices.get(indices.get(i)).z;
         }
 
         // Build vertex buffer
@@ -187,13 +202,14 @@ public class Model {
         normalBuffer.put(normalsArray);
         normalBuffer.position(0);
 
-        // Build index buffer
+        // this is not used, this was for drawing a indexed array, but then texture coordinates per vertex get messed up
+        /*// Build index buffer
         indexCount = indicesArray.length;
         vbb = ByteBuffer.allocateDirect(indexCount * BYTES_PER_SHORT);
         vbb.order(ByteOrder.nativeOrder());
         indexBuffer = vbb.asShortBuffer();
         indexBuffer.put(indicesArray);
-        indexBuffer.position(0);
+        indexBuffer.position(0);*/
 
         // Load textures
         //get the resource id from the file name
@@ -245,17 +261,18 @@ public class Model {
     private static void processVertex(String[] vertexData, List<Integer> indices, List<PointF> textures,
                                       List<Vector3f> normals, float[] textureArray, float[] normalsArray){
 
+        int index = indices.size();
         int currrentVertexPointer = Integer.parseInt(vertexData[0]) - 1;
         indices.add(currrentVertexPointer);
         // texture coords
         PointF currentTex = textures.get(Integer.parseInt(vertexData[1]) - 1);
-        textureArray[currrentVertexPointer * 2] = currentTex.x;
-        textureArray[currrentVertexPointer * 2 + 1] = 1 - currentTex.y;
+        textureArray[index * 2] = currentTex.x;
+        textureArray[(index * 2) + 1] = 1 - currentTex.y;
         // normals
         Vector3f currentNorm = normals.get(Integer.parseInt(vertexData[2]) - 1);
-        normalsArray[currrentVertexPointer * 3] = currentNorm.x;
-        normalsArray[currrentVertexPointer * 3 + 1] = currentNorm.y;
-        normalsArray[currrentVertexPointer * 3 + 2] = currentNorm.z;
+        normalsArray[index * 3] = currentNorm.x;
+        normalsArray[(index * 3) + 1] = currentNorm.y;
+        normalsArray[(index * 3) + 2] = currentNorm.z;
     }
 
     // Render this shape
@@ -289,9 +306,9 @@ public class Model {
 
         GLES20.glFrontFace(GLES20.GL_CCW);    // Front face in counter-clockwise orientation
         GLES20.glEnable(GLES20.GL_TEXTURE_2D);
-        GLES20.glEnable(GLES20.GL_FRONT_AND_BACK);
-        //GLES20.glEnable(GLES20.GL_CULL_FACE);//draw front faces only
-        //GLES20.glEnable(GLES20.GL_FRONT);//draw front faces only
+        //GLES20.glEnable(GLES20.GL_FRONT_AND_BACK);
+        GLES20.glEnable(GLES20.GL_CULL_FACE);//draw front faces only
+        GLES20.glEnable(GLES20.GL_FRONT);//draw front faces only
         //GLES20.glDisable(GLES20.GL_BACK);
         GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -374,8 +391,9 @@ public class Model {
         }
 
         // Draw the model
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, indexCount,
-                GLES20.GL_UNSIGNED_SHORT, indexBuffer);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0, vertexCount/3);
+        /*GLES20.glDrawElements(GLES20.GL_TRIANGLES, indexCount,
+                GLES20.GL_UNSIGNED_SHORT, indexBuffer);// draw indexed buffer*/
 
 
         // Disable vertex array

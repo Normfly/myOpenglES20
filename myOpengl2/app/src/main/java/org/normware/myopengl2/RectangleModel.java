@@ -34,12 +34,7 @@ public class RectangleModel {
     public PointF size;
     public boolean lighted;
 
-    private float[] vertices = {  // Vertices for the square
-            -1.0f, -1.0f,  0.0f,  // 0. left-bottom
-            1.0f, -1.0f,  0.0f,  // 1. right-bottom
-            -1.0f,  1.0f,  0.0f,  // 2. left-top
-            1.0f,  1.0f,  0.0f   // 3. right-top
-    };
+    private float[] vertices;
 
     // The order of vertexrendering for a quad
     short[] indices = new short[] {0, 1, 2, 0, 2, 3};
@@ -51,35 +46,43 @@ public class RectangleModel {
             1.0f, 0.0f   // D. right-bottom
     };
 
-    public RectangleModel(PointF size, boolean transparent, boolean lighted, boolean centered) {
+    public RectangleModel(PointF size, boolean transparent, boolean lighted, boolean centered, boolean vertical) {
         this.size = size;
         this.lighted = lighted;
-        if (centered){
+        if (vertical){
             // centered vertices
-            vertices = new float[]{
-                    -size.x/2, 0f, size.y/2,//top left
-                    -size.x/2, 0f, -size.y/2,//bottom left
-                    size.x/2, 0f, -size.y/2,//bottom right
-                    size.x/2, 0f, size.y/2};//top right
-        }else{// left/top = 0,0
-            vertices = new float[]{
-                    0f, 0f, size.y, // 0. top left
-                    0f, 0f, 0f, // 1. bottom left
-                    size.x, 0f, 0f, // 2. bottom right
-                    size.x, 0f, size.y};  // 3 top right
-            /*// centered vertices
-            vertices = new float[]{
+            if (centered){
+                vertices = new float[]{
                     -size.x/2, size.y/2, 0,//top left
                     -size.x/2, -size.y/2, 0,//bottom left
                     size.x/2, -size.y/2, 0,//bottom right
                     size.x/2, size.y/2, 0};//top right
-        }else{// left/top = 0,0
-            vertices = new float[]{
-                    0, size.y, 0, // 0. top left
-                    0, 0, 0, // 1. bottom left
-                    size.x, 0, 0, // 2. bottom right
-                    size.x, size.y,0};  // 3 top right*/
+            }else {// left/top = 0,0
+                vertices = new float[]{
+                        0, size.y, 0, // 0. top left
+                        0, 0, 0, // 1. bottom left
+                        size.x, 0, 0, // 2. bottom right
+                        size.x, size.y, 0};  // 3 top right
+            }
+        }else{//horizontal
+            if (centered){
+                // create flat rectangle
+                // centered vertices
+                vertices = new float[]{
+                        -size.x/2, 0f, size.y/2,//bottom left
+                        -size.x/2, 0f, -size.y/2,//top left
+                        size.x/2, 0f, -size.y/2,//top right
+                        size.x/2, 0f, size.y/2};//bottom right
+            }else{// left/top = 0,0
+                vertices = new float[]{
+                        0f, 0f, size.y, // 0. bottom left
+                        0f, 0f, 0f, // 1. top left
+                        size.x, 0f, 0f, // 2. top right
+                        size.x, 0f, size.y};  // 3 bottom right
+
+            }
         }
+
 
         this.transparent = transparent;
 
