@@ -28,4 +28,8 @@ public class LocAngScale {
         return new LocAngScale(Vector3f.ZERO, Vector3f.ZERO, Vector3f.ONE);
     }
 
+    public final LocAngScale Copy(){
+        return new LocAngScale(location.Copy(), angles.Copy(), scales.Copy());
+    }
+
 }

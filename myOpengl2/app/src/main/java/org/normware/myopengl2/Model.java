@@ -285,27 +285,9 @@ public class Model {
     }
 
     private void BuildShaddow(List<Vector3f> vertices, Globals globals){
-/*
 
+        //doesn't rotate or scale, would need to be redone
 
-
-        ////temp/////
-        float[] v = new float[]{
-                -1f, 0f, 1f,//bottom left
-                -1f, 0f, -1f,//top left
-                1f, 0f, -1f};//bottom right
-
-        // Setup vertex array buffer. Vertices in float. A float has 4 bytes
-        ByteBuffer vbb = ByteBuffer.allocateDirect(v.length * BYTES_PER_FLOAT);
-        vbb.order(ByteOrder.nativeOrder()); // Use native byte order
-        shadowVertexBuffer = vbb.asFloatBuffer(); // Convert from byte to float
-        shadowVertexBuffer.put(v);         // Copy data into buffer
-        shadowVertexBuffer.position(0);
-
-
-
-
-*/
 
         float floor = boundingBoxCube.frontBack.bottom + 0.01f;
         Vector3f lightPos = Vector3f.FloatToVector3f(globals.lightPosition);
@@ -354,7 +336,8 @@ public class Model {
 
         if (!shadowed){return;}
 
-        modelPos.location.y = -0.01f;//tweak to bring above ground, with depth test on
+        LocAngScale shadowPos = modelPos.Copy();
+        shadowPos.location.y = -0.01f;//tweak to bring above ground, with depth test on
 
         float[] modelMatrix = new float[16];
         float[] projectionMatrix = new float[16];
@@ -363,9 +346,9 @@ public class Model {
         //translate
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
 
-        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
-                -modelPos.location.y,
-                modelPos.location.z);//move
+        Matrix.translateM(modelMatrix, 0, shadowPos.location.x,
+                -shadowPos.location.y,
+                shadowPos.location.z);//move
 
         //perspective view matrix
         Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix

@@ -1,6 +1,5 @@
 package org.normware.myopengl2;
 
-import android.graphics.Matrix;
 import android.graphics.PointF;
 
 import static org.normware.myopengl2.Collisions.GetAngle;
@@ -208,4 +207,5 @@ public class Vector3f {
         return new Vector3f(x, -y, z);
     }
 
+    public final Vector3f Copy(){return new Vector3f(x, y, z);}
 }
