@@ -3,22 +3,22 @@ package org.normware.myopengl2;
 import android.content.Context;
 
 public class Model3d {
-    public PosAngScale position;
+    public LocAngScale position;
     public String name;
     public Model model;
 
-    public Model3d(String name, Boolean transparent, Boolean lighted, float alpha, PosAngScale location){
+    public Model3d(String name, Boolean transparent, Boolean lighted, float alpha, LocAngScale location){
         this.name = name;
         this.position = location;
         model = new Model(transparent, lighted, alpha);
     }
 
     public void Draw(Globals globals){
-        model.draw(globals, position);
+        model.Draw(globals, position);
     }
 
-    public void LoadTexture(Context context, String imageName, int textureIndex){
-        model.LoadModel(context, imageName, textureIndex);
+    public void LoadTexture(Globals globals, Context context, String imageName, int textureIndex, boolean shadowed){
+        model.LoadModel( globals, context, imageName, textureIndex, shadowed);
     }
 
     public Vector3f getPosition(){

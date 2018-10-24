@@ -1,0 +1,26 @@
+# Blender MTL File: 'Catapult.blend'
+# Material Count: 2
+
+newmtl arm
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.000000 0.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd C:\Users\normf\Documents\Blender Stuff\catapult.jpg
+map_Bump -bm -2.309260 C:\\Users\\normf\\Documents\\Blender Stuff\\catapult_uv.jpg
+
+newmtl gestell
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.610493 0.610493 0.610493
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
+map_Kd C:\Users\normf\Documents\Blender Stuff\catapult.jpg
+map_Bump -bm -2.309260 C:\\Users\\normf\\Documents\\Blender Stuff\\catapult_uv.jpg

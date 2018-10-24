@@ -7,13 +7,13 @@ attribute vec4 a_Position;
 attribute vec2 a_texCoord;
 attribute vec3 a_Normal;
 attribute vec4 a_Color;
-attribute float a_alpha;
+//attribute vec2 a_alpha;
 
 varying vec2 v_texCoord;// texture uv coordinates
 varying vec3 v_Normal;// texture normals before translation/scale/rotation(which way the face is pointing for lighting brightness reflection)
 varying vec3 v_Position;// vector position before translation/scale/rotation
 varying vec4 v_Color;// ambient light color, 4th position is brightness
-varying float v_alpha;// used for opacity, must be passed in or it defaults to 0, wich is fully opaque (invisible)
+//varying float v_alpha;// used for opacity, must be passed in or it defaults to 0, wich is fully opaque (invisible)
 // u_LightPos directional light position, 4th position is brightness
 
 void main() {
@@ -23,5 +23,5 @@ void main() {
  v_Position = vec3(u_MVPMatrix * a_Position);
  gl_Position = u_MVPMatrix * a_Position;
  v_texCoord = a_texCoord;
- v_alpha = a_alpha;
+ //v_alpha = a_alpha.x;
 }

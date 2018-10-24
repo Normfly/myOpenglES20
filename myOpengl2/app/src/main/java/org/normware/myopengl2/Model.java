@@ -40,6 +40,7 @@ public class Model {
     private FloatBuffer normalBuffer; // Buffer for normals array
     private FloatBuffer texBuffer; // Buffer for textures
     private ShortBuffer indexBuffer;    // Buffer for index-array
+    private FloatBuffer shadowVertexBuffer;// Buffer for vertex array for shaddow (flat)
     protected int vertexCount;
     protected int indexCount;
     protected int textureCount;
@@ -50,6 +51,8 @@ public class Model {
     public boolean transparent;
     public boolean lighted;
     public float alpha;
+    public Cube boundingBoxCube = new Cube();
+    private boolean shadowed;
 
     /*private int texPointer = 0;
     private int normalsPointer = 0;*/
@@ -58,7 +61,7 @@ public class Model {
     // position/texture/normals
     // blender export options - write normals
     // include UV's
-    // write materials
+    // write  materials
     // triangulate faces
     // Objects as OBJ Objects
     Model(boolean transparent, boolean lighted, float alpha){
@@ -67,20 +70,21 @@ public class Model {
         this.alpha = alpha;
     }
 
-    public void LoadModel(Context context, String fileName, int textureIndex){
+    public void LoadModel(Globals globals, Context context, String fileName, int textureIndex, boolean shadowed){
         //load file
         this.textureIndex = textureIndex;
+        this.shadowed = shadowed;
 
         String data;
         try {
             InputStream is = context.getAssets().open(fileName + ".obj");
-            readOBJText(context, is);
+            readOBJText(globals, context, is);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void readOBJText(Context context, @NonNull InputStream stream) throws IOException {
+    private void readOBJText(Globals globals, Context context, @NonNull InputStream stream) throws IOException {
         // position/texture/normals
         // blender export options - write normals
         // include UV's
@@ -91,6 +95,7 @@ public class Model {
 
         String line;
         List<Vector3f> vertices = new ArrayList<Vector3f>();
+        List<Vector3f> fullVertices = new ArrayList<Vector3f>();
         List<PointF> textures = new ArrayList<PointF>();
         List<Vector3f> normals = new ArrayList<Vector3f>();
         List<Integer> indices = new ArrayList<Integer>();
@@ -116,9 +121,9 @@ public class Model {
                 }else if (line.startsWith("vt ")){
                     PointF texture = new PointF(Float.parseFloat(currentLine[1]),
                                                     Float.parseFloat(currentLine[2]));
-                    if (texture.x != 0.0f && texture.y != 0.0f){
+                    //if (texture.x != 0.0f && texture.y != 0.0f){
                         textures.add(texture);// add texture coordinates as long as they are not 0.0 for unassigned texture coordinates
-                    }
+                    //}
                 }else if (line.startsWith("vn ")) {
                     Vector3f normal = new Vector3f(Float.parseFloat(currentLine[1]),
                             Float.parseFloat(currentLine[2]),
@@ -132,7 +137,7 @@ public class Model {
             }
 
             textureArray = new float[(facesArray.size() * 3) * 2];//3 floats / 2 uv coordinates
-            normalsArray = new float[facesArray.size() * 3 * 3];//3 floats / 3 indicies per face
+            normalsArray = new float[(facesArray.size() * 3) * 3];//3 floats / 3 indicies per face
 
             for (int face = 0; face < facesArray.size(); face++){
                 line = facesArray.get(face);
@@ -169,14 +174,32 @@ public class Model {
             indicesArray[i] = s;//indices.get(i);
         }
 
-        // Build non indexed vertex array
-        float[] tempArray = verticesArray;
-        verticesArray = new float[indicesArray.length * 3];//3 floats x,y,z per index
+        // Build non indexed vertex array, normals array, texture coords array
+        verticesArray = new float[indicesArray.length * 3];//3 floats x,y,z per index for vertices
+        //normalsArray = new float[indicesArray.length * 3];// 3 floats x,y,z per index for normals
+        //textureArray = new float[indicesArray.length * 2];// 2 floats u,v per index for texture coordinates
+
         for (int i = 0; i < indicesArray.length; i++){//once per x,y,z
-            verticesArray[i * 3] = vertices.get(indices.get(i)).x;
-            verticesArray[(i * 3) + 1] = vertices.get(indices.get(i)).y;
-            verticesArray[(i * 3) + 2] = vertices.get(indices.get(i)).z;
+            //rebuild vertices
+            Vector3f v = vertices.get(indices.get(i));
+            fullVertices.add(v);//used to build shaddow
+            verticesArray[i * 3] = v.x;
+            verticesArray[(i * 3) + 1] = v.y;
+            verticesArray[(i * 3) + 2] = v.z;
+            /*//rebuild normals
+            Vector3f n = normals.get(indices.get(i));
+            normalsArray[i * 3] = n.x;
+            normalsArray[(i * 3) + 1] = n.y;
+            normalsArray[(i * 3) + 2] = n.z;
+            //rebuild texture coordinates
+            PointF t = textures.get(indices.get(i));
+            textureArray[i * 2] = t.x;
+            textureArray[(i * 2) + 1] = t.y;*/
+
+            BuildBoundingBox(v);
         }
+
+        boundingBoxCube = new Cube(boundingBoxCube.leftRight,boundingBoxCube.frontBack);
 
         // Build vertex buffer
         vertexCount = verticesArray.length;
@@ -211,6 +234,8 @@ public class Model {
         indexBuffer.put(indicesArray);
         indexBuffer.position(0);*/
 
+        if (shadowed){BuildShaddow(fullVertices, globals);}
+
         // Load textures
         //get the resource id from the file name
         //load file
@@ -239,7 +264,8 @@ public class Model {
                     //GLES20.glGenTextures(1, textureIDs, 0);  // Generate texture-ID array
 
                     // Create Nearest Filtered Texture and bind it to texture 0 (NEW)
-                    GLES20.glBindTexture(GL_TEXTURE_2D, textureIndex);
+                    //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);// + textureIndex);
+                    GLES20.glBindTexture(GL_TEXTURE_2D, globals.textureIDs[textureIndex]);
                     /*GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
                     GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
                     GLES20.glTexParameterf(GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
@@ -256,6 +282,54 @@ public class Model {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void BuildShaddow(List<Vector3f> vertices, Globals globals){
+/*
+
+
+
+        ////temp/////
+        float[] v = new float[]{
+                -1f, 0f, 1f,//bottom left
+                -1f, 0f, -1f,//top left
+                1f, 0f, -1f};//bottom right
+
+        // Setup vertex array buffer. Vertices in float. A float has 4 bytes
+        ByteBuffer vbb = ByteBuffer.allocateDirect(v.length * BYTES_PER_FLOAT);
+        vbb.order(ByteOrder.nativeOrder()); // Use native byte order
+        shadowVertexBuffer = vbb.asFloatBuffer(); // Convert from byte to float
+        shadowVertexBuffer.put(v);         // Copy data into buffer
+        shadowVertexBuffer.position(0);
+
+
+
+
+*/
+
+        float floor = boundingBoxCube.frontBack.bottom + 0.01f;
+        Vector3f lightPos = Vector3f.FloatToVector3f(globals.lightPosition);
+        float[] shaddowertexArray = new float[vertices.size() * 3];
+        int ii = 0;
+
+        for (int i = 0; i < vertices.size(); i++){
+            //flatten and move vertices to feet
+            //Vector3f newVertex = vertices.get(i).FlipY();//
+            Vector3f newVertex = Vector3f.FlattenToY(vertices.get(i).FlipY(), lightPos, floor);
+            //Vector3f newVertex = Collisions.RayIntersectY(vertices.get(i).FlipY(), lightPos, floor);
+            shaddowertexArray[ii++] = newVertex.x;
+            shaddowertexArray[ii++] = newVertex.y;
+            shaddowertexArray[ii++] = newVertex.z;
+
+        }
+
+        // Build vertex buffer
+        ByteBuffer vbb = ByteBuffer.allocateDirect(vertexCount * BYTES_PER_FLOAT);
+        vbb.order(ByteOrder.nativeOrder());
+        shadowVertexBuffer = vbb.asFloatBuffer();
+        shadowVertexBuffer.put(shaddowertexArray);
+        shadowVertexBuffer.position(0);
+
     }
 
     private static void processVertex(String[] vertexData, List<Integer> indices, List<PointF> textures,
@@ -275,8 +349,75 @@ public class Model {
         normalsArray[(index * 3) + 2] = currentNorm.z;
     }
 
+    // Render shaddow
+    public void DrawShaddow(Globals globals, LocAngScale modelPos) {
+
+        if (!shadowed){return;}
+
+        modelPos.location.y = -0.01f;//tweak to bring above ground, with depth test on
+
+        float[] modelMatrix = new float[16];
+        float[] projectionMatrix = new float[16];
+        float[] finalMatrix = new float[16];
+
+        //translate
+        Matrix.setIdentityM(modelMatrix, 0);//set to 0
+
+        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
+                -modelPos.location.y,
+                modelPos.location.z);//move
+
+        //perspective view matrix
+        Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix
+        finalMatrix = projectionMatrix.clone();//final matrix created
+
+
+        GLES20.glUseProgram(GraphicTools.sp_SolidColor);//use shader programs
+
+        //GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+
+        GLES20.glEnable(GLES20.GL_CULL_FACE);
+        GLES20.glEnable(GLES20.GL_FRONT);
+        GLES20.glEnable(GLES20.GL_BLEND);       // Turn blending on
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+
+        // Get handle to color
+        int colorHandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_Color");
+        // pass color info to shader program
+        float[] color = new float[]{0f, 0f, 0f, 0.5f};
+        GLES20.glUniform4fv(colorHandle, 1, color, 0);
+
+        // Get handle to shape's transformation matrix
+        int mtrxhandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_MVPMatrix");
+
+        // Apply the projection and view transformation
+        GLES20.glUniformMatrix4fv(mtrxhandle, 1, false, finalMatrix, 0);
+
+        // get handle to vertex shader's vPosition member
+        int mPositionHandle = GLES20.glGetAttribLocation(GraphicTools.sp_SolidColor, "a_Position");
+
+        // Enable generic vertex attribute array
+        GLES20.glEnableVertexAttribArray(mPositionHandle);
+
+        // Prepare the triangle coordinate data
+        GLES20.glVertexAttribPointer(mPositionHandle, 3,
+                GLES20.GL_FLOAT, false,
+                0, shadowVertexBuffer);
+
+
+        //GLES20.glDrawArrays(GLES20.GL_POINTS, 0, 1);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount/3);
+
+        // Disable vertex array
+        GLES20.glDisableVertexAttribArray(mPositionHandle);
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+
+
+    }
+
     // Render this shape
-    public void draw(Globals globals, PosAngScale modelPos) {
+    public void Draw(Globals globals, LocAngScale modelPos) {
 
         // Matrix transformations
         //Set a mModelMatrix to identity Matrix
@@ -285,19 +426,29 @@ public class Model {
         float[] finalMatrix;
         float[] projectionMatrix = new float[16];
         float[] tempMatrix = new float[16];
+        float[] rotateMatrix = new float[16];
 
         //translate scale and rotate
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
-        Matrix.scaleM(modelMatrix, 0, modelPos.scales.x,
-                                                modelPos.scales.y,
-                                                modelPos.scales.z);//scale
-        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
-                                                    -modelPos.location.y,
-                                                    modelPos.location.z);//move
+
         //rotate
         Matrix.rotateM(modelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
-        Matrix.rotateM(modelMatrix, 0, modelPos.angles.y, 0f, 1f, 0f);
-        Matrix.rotateM(modelMatrix, 0, modelPos.angles.z, 0f, 0f, 1f);
+        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
+        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
+
+        //translate
+        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
+                -modelPos.location.y,
+                modelPos.location.z);//move
+
+
+        //scale
+        Matrix.scaleM(modelMatrix, 0, modelPos.scales.x,
+                modelPos.scales.y,
+                modelPos.scales.z);//scale
+
+
+
         //choose ortho or perspective view matrix
         Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix
         finalMatrix = projectionMatrix.clone();//final matrix created
@@ -315,7 +466,8 @@ public class Model {
         GLES20.glTexParameterf(GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
         GLES20.glTexParameterf(GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIndex);// bind texture for drawing
+        //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, globals.textureIDs[textureIndex]);// bind texture for drawing
 
         GLES20.glUseProgram(GraphicTools.sp_ImageLighting);//which shaders to use
 
@@ -330,9 +482,11 @@ public class Model {
         GLES20.glUniformMatrix4fv(uMVPmatrix, 1, false, finalMatrix, 0);
 
         // opacity
-        int aAlpha = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_alpha");
-        GLES20.glEnableVertexAttribArray(aAlpha);
-        GLES20.glVertexAttrib1f(aAlpha, alpha);
+        int aAlpha = GLES20.glGetUniformLocation(GraphicTools.sp_ImageLighting, "u_alpha");
+        GLES20.glUniform1f(aAlpha, alpha);
+        //int aAlpha = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_alpha");
+        //GLES20.glEnableVertexAttribArray(aAlpha);
+        //GLES20.glVertexAttrib1f(aAlpha, alpha);
 
         // directional lighting direction, 4th is brightness
         int aColor = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_Color");
@@ -373,7 +527,7 @@ public class Model {
 
         // Get handle to textures locations
         int uTexture = GLES20.glGetUniformLocation (GraphicTools.sp_ImageLighting, "u_texture" );
-        // Set the sampler texture unit to 0, where we have saved the texture.
+
         GLES20.glUniform1i (uTexture, 0);
 
         // normals stuff
@@ -405,6 +559,36 @@ public class Model {
         GLES20.glDisable(GLES20.GL_CULL_FACE);
         GLES20.glDisable(GLES20.GL_BLEND);// disable blending
         //GLES20.glDisable(GLES20.GL_LIGHTING);// disable lighting
+        //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);// must do this after bumptext
+    }
+
+    private void BuildBoundingBox(Vector3f vertex){
+
+        Vector3f v = new Vector3f(vertex.x, -vertex.y, vertex.z);
+
+        // build left/right x/y
+        if (v.x < boundingBoxCube.frontBack.left){
+            boundingBoxCube.frontBack.left = v.x;
+            boundingBoxCube.topBottom.left = v.x;
+        }else if (v.x > boundingBoxCube.frontBack.right){
+            boundingBoxCube.frontBack.right = v.x;
+            boundingBoxCube.topBottom.right = v.x;
+        }
+        if (v.y < boundingBoxCube.frontBack.top){
+            boundingBoxCube.frontBack.top = v.y;
+            boundingBoxCube.leftRight.top = v.y;
+        }else if (v.y > boundingBoxCube.frontBack.bottom){
+            boundingBoxCube.frontBack.bottom = v.y;
+            boundingBoxCube.leftRight.bottom = v.y;
+        }
+        // build front/back z
+        if (v.z < boundingBoxCube.topBottom.top){
+            boundingBoxCube.topBottom.top = v.z;
+            boundingBoxCube.leftRight.left = v.z;
+        }else if (v.z > boundingBoxCube.topBottom.bottom){
+            boundingBoxCube.topBottom.bottom = v.z;
+            boundingBoxCube.leftRight.right = v.z;
+        }
 
     }
 

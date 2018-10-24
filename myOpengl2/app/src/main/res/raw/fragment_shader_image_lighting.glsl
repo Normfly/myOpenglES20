@@ -4,9 +4,9 @@ varying vec2 v_texCoord;
 varying vec3 v_Position;        // Interpolated position for this fragment.
 varying vec3 v_Normal;          // Interpolated normal for this fragment.
 varying vec4 v_Color;           // light color and ambient light brightness
-varying float v_alpha;          // used for opacity
+//varying float v_alpha;          // used for opacity
 
-
+uniform float u_alpha;          // used for opacity
 uniform sampler2D u_texture;
 uniform vec4 u_LightPos;        // The position of the light in eye space. 4th position is brightness
 //uniform vec3 u_LightDir;        // The direction of the light
@@ -42,6 +42,6 @@ void main()
 
         if (gl_FragColor.a > 0.0)//make non transparent pixels opaque
         {
-          gl_FragColor.a *= v_alpha;//opacity value
+          gl_FragColor.a *= u_alpha;//v_alpha;//opacity value
         }
 }

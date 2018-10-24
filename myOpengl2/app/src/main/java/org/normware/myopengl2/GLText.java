@@ -33,7 +33,7 @@ public class GLText {
             "n" + "\n" + "o" + "\n" + "p" + "\n" + "q" + "\n" + "r" + "\n" + "s" + "\n" + "t" + "\n" + "u" + "\n" + "v" + "\n" + "w" + "\n" +
             "x" + "\n" + "y" + "\n" + "z" + "\n" + "{" + "\n" + "|" + "\n" + "}" + "\n" + "~";
 
-    public void LoadFont(Context context, int textColor, int backgroundColor, boolean transparent, float size, int textureIndex){
+    public void LoadFont(Globals globals, Context context, int textColor, int backgroundColor, boolean transparent, float size, int textureIndex){
         this.size = size;
         this.textColor = textColor;
         this.backgroundColor = backgroundColor;
@@ -45,7 +45,7 @@ public class GLText {
         //square = new Square(globalVars, new Vector2f((float)bounds.width() / 100, (float)bounds.height() / 100), transparent);// new square, sized based on text bounds
         //rectangleModel = new RectangleModel(new PointF((float)bitmap.getWidth() / 100, (float)bitmap.getHeight() / 100),
         //        transparent, false, false);
-        rectangleModel = new RectangleModel(new PointF(size, size), transparent, false, false, true);
+        rectangleModel = new RectangleModel(new PointF(size, size), transparent, false, true);
 
         float[] texCoords = {
                 0.005f, 0.0f,  // A. left-bottom
@@ -54,7 +54,7 @@ public class GLText {
                 1.0f, 0.0f   // D. right-bottom
         };
 
-        rectangleModel.LoadTexture(context, bitmap, textureIndex, texCoords);
+        rectangleModel.LoadTexture(globals, context, bitmap, textureIndex, texCoords);
         bitmap.recycle();
     }
 
@@ -91,7 +91,7 @@ public class GLText {
         return b;
     }
 
-    private float[] GetMatrix(){
+    /*private float[] GetMatrix(){
         // 10x10 screen size for openGL
         float[] tempMatrix = new float[16];
         float[] cameraViewMatrix = new float[16];
@@ -107,18 +107,19 @@ public class GLText {
         // Setup perspective projection matrix
         Matrix.multiplyMM(tempMatrix, 0, orthoMatrix, 0, cameraViewMatrix, 0);//add camera matrix to perspective
         return tempMatrix;
+    }*/
+
+    public void DrawHUD(Globals globals, String text, PointF location){
+        //float[] HUDmatrix = new float[16];
+        //Matrix.orthoM(HUDmatrix, 0, 0f, globals.glScreenWidth, 0f, globals.glScreenHeight, 0.1f, -100f);//GetMatrix();
+        Draw(globals, text, new Vector3f(location.x - size, globals.glScreenHeight - location.y - size, 0), true);
     }
 
-    public void DrawHUD(String text, PointF location){
-        float[] HUDmatrix = GetMatrix();
-        Draw(HUDmatrix, text, new Vector3f(location.x, location.y, 0));
+    public void Draw(Globals globals, String text, PointF position, boolean HUD){
+        Draw(globals, text, new Vector3f(position.x - size, position.y - size, 0), HUD);
     }
 
-    public void Draw(float[] viewMatrix, String text, PointF position){
-        Draw(viewMatrix, text, new Vector3f(position.x - size, position.y - size, 0));
-    }
-
-    public void Draw(float[] viewMatrix, String text, Vector3f position){
+    public void Draw(Globals globals, String text, Vector3f position, boolean HUD){
 
         char c;
         int keyCode;
@@ -141,7 +142,7 @@ public class GLText {
             rect.setRight(width);
             rectangleModel.UpdateTextureCoords(rect.getRect());
             position.x += size;
-            rectangleModel.Draw(viewMatrix, new Vector3f(position.x, -position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
+            rectangleModel.Draw(globals, new Vector3f(position.x, -position.y, position.z), new Vector3f(0f, 0f, 0f), 1f, HUD);
         }
     }
 }
