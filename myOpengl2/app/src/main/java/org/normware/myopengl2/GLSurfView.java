@@ -70,7 +70,7 @@ public class GLSurfView extends GLSurfaceView {
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override
         public boolean onScale(ScaleGestureDetector scaleGestureDetector){
-            mRenderer.scale *= scaleGestureDetector.getScaleFactor();
+            mRenderer.globals.scale *= scaleGestureDetector.getScaleFactor();
 
             return true;
         }

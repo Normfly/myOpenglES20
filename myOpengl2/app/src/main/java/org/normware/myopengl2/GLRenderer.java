@@ -11,15 +11,30 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.GLUtils;
 import android.opengl.Matrix;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.util.Random;
 
+import static android.content.ContentValues.TAG;
+import static android.opengl.GLES20.GL_CLAMP_TO_EDGE;
+import static android.opengl.GLES20.GL_LINEAR;
+import static android.opengl.GLES20.GL_RGBA;
+import static android.opengl.GLES20.GL_TEXTURE0;
+import static android.opengl.GLES20.GL_TEXTURE_2D;
+import static android.opengl.GLES20.GL_TEXTURE_MAG_FILTER;
+import static android.opengl.GLES20.GL_TEXTURE_MIN_FILTER;
+import static android.opengl.GLES20.GL_TEXTURE_WRAP_S;
+import static android.opengl.GLES20.GL_TEXTURE_WRAP_T;
+import static android.opengl.GLES20.GL_UNSIGNED_BYTE;
 import static org.normware.myopengl2.Collisions.GetAngle;
+import static org.normware.myopengl2.Collisions.RotatePointF;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
 import static org.normware.myopengl2.Constants.TOUCH_SCALE_FACTOR;
 
@@ -29,6 +44,7 @@ public class GLRenderer implements Renderer {
 	//y up-   / down+
 	//z close+/ far-
 
+    private boolean mHasDepthTextureExtension = false;
     public int FPS;
     private int FPScounnter;
     public long lastFPSTime;
@@ -41,14 +57,28 @@ public class GLRenderer implements Renderer {
 	private Vector3f testLoc = new Vector3f(0f, 0f, 0f);
 
 	//3d models
-	public RectangleModel grass = new RectangleModel(new PointF(10f, 10f), false, true, false);
-	public Model keep = new Model(false, true, 1.0f);
+    //public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false);
+    public RectangleModel sky = new RectangleModel(new PointF(1f, 1f), false, false, true);
+    public RectangleModel grass = new RectangleModel(new PointF(10f, 10f), false, true, false);
+    public Model keep = new Model(false, true, 1.0f);
+    public Model catapult = new Model(false, true, 1.0f);
+
+    //public Map map = new Map();
+    //public Wall wall = new Wall();
+    // public Animation wall = new Animation();
+	//RectangleModel modelRec = new RectangleModel(new PointF(20f, 20f), false, true, true);
+    /*Model3d keep = new Model3d("test", true, true, 1.0f,
+            new LocAngScale(0f, 0.0f, 0f,//location
+                    0f, 0f, 0f,//rotations
+                    1.0f, 1.0f, 1.0f));//size*/
+
+    //public Model test = new Model(false, false, 1.0f);
+
+
+    //Keeps keeps = new Keeps(2);
 	GLText glText = new GLText();
 	DrawDot dot = new DrawDot();
 
-	Vector3f cameraAngles = new Vector3f(30f, 0f, 0f);
-	Vector3f cameraPosition = new Vector3f(0f, 0f, -10f);
-	float scale = 1.0f;
 	public boolean perspectiveView = true;//perspective or ortho
 	PointF lastScreenTouch = new PointF();
 
@@ -101,41 +131,95 @@ public class GLRenderer implements Renderer {
 
 	@Override
 	public void onSurfaceChanged(GL10 gl, int width, int height) {
-		
+
 		// We need to know the current width and height.
-		globals.sceenWidth = width;
+		globals.screenWidth = width;
 		globals.screenHeight = height;
 		if (height > width){
 			globals.aspectRatio = (float)width/height;
+			globals.revAspectRatio = (float)height/width;
+			globals.glScreenWidth = globals.glScreenSize * globals.aspectRatio;
+			globals.glScreenHeight = globals.glScreenSize;
 		}else{
 			globals.aspectRatio = (float)height/width;
+			globals.revAspectRatio = (float)width/height;
+            globals.glScreenWidth = globals.glScreenSize;
+            globals.glScreenHeight = globals.glScreenSize * globals.aspectRatio;
 		}
 		
 		// Redo the Viewport, making it fullscreen.
-		GLES20.glViewport(0, 0, (int)globals.sceenWidth, (int)globals.screenHeight);
-		
+		GLES20.glViewport(0, 0, (int)globals.screenWidth, (int)globals.screenHeight);
+
 		UpdateWorldMatrix();
+
+        GenerateShadowFBO();
 	}
 
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 
-        // Set the clear color to black
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1);
-
         SetupShaderPrograms();
+
 
         //load textures
 		GLES20.glGenTextures(globals.textureIDs.length, globals.textureIDs, 0);  // Generate texture-ID array
+		//modelRec.LoadTexture(mContext, R.drawable.ic_launcher, texturePntr++);
 
-		texturePntr = grass.LoadTexture(globals, mContext, R.raw.grass,texturePntr++);//load flat rectangle
-        keep.LoadModel(globals, mContext, "keep",texturePntr++, true);//load 3d model from obj file
+        //if going more than 10, make sure to update textureIDs
+
+        texturePntr = 1;//save 0 for shadow
+		//texturePntr = map.Load(globals, mContext, texturePntr);
+        //texturePntr = LoadKeeps(texturePntr);
+		//texturePntr = LoadWall(texturePntr);
+
+        sky.LoadTexture(globals, mContext, R.raw.sky, texturePntr++);
+        grass.LoadTexture(globals, mContext, R.raw.grass, texturePntr++);
 
         glText.LoadFont(globals, mContext, Color.argb(255,255,255,255),
 												Color.argb(0,0,0,0),
-												true, .5f, texturePntr++);
+												true, 1f, texturePntr++);
+
+
+        keep.LoadModel(globals, mContext, "keep", texturePntr++, true);
+        catapult.LoadModel(globals, mContext, "Catapult", texturePntr++, true);
+
+		//test.LoadModel(globals, mContext, "wallstraight", texturePntr++, true);
+
+
+
+
+               /* Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.raw.catapult);
+                GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,  3);
+                GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+                bitmap.recycle();*/
+
+
+
 
 	}
+
+	/*private int LoadKeeps(int textureIndex){
+	    keeps.LoadKeep(globals, mContext, textureIndex++);
+	    keeps.location[0] = new Vector3f(0f, -0.0f, -2f);
+	    keeps.location[1] = new Vector3f(0f, -0.0f, 2f);
+        return textureIndex;
+    }
+
+	private int LoadWall(int textureIndex){
+	    textureIndex = wall.LoadWall(globals, mContext, textureIndex++);
+
+	    wall.AddWall(Wall.WALLSTRAIGHT, new Vector3f(1.0f, 0f, 0f), new Vector3f(0f, 0f, 0f), 0);
+	    wall.AddWall(Wall.WALLSTRAIGHT, new Vector3f(0f, 0f, 0f), Vector3f.ZERO, 0);
+	    wall.AddWall(Wall.WALLSTRAIGHT, new Vector3f(-1f, 0f, 0f), Vector3f.ZERO, 0);
+	   *//* String[] imageNames = new String[]{"wallstraight", "wallsingle"};
+	    textureIndex = wall.LoadTexture(mContext, imageNames, textureIndex,true, true, 1.0f, true,
+                new LocAngScale(0f, 0.0f, 0f,//location
+                                0f, 0f, 0f,//rotations
+                                1.0f, 1.0f, 1.0f));//bounding box size and location*//*
+	    *//*wall.AddAnimation("test", 0, 1, true, 10);
+	    wall.SetCurrentAnimation("test");*//*
+	    return textureIndex;
+    }*/
 
 	private void SetupShaderPrograms(){
 		// load shader text
@@ -176,6 +260,14 @@ public class GLRenderer implements Renderer {
 		GLES20.glAttachShader(GraphicTools.sp_ImageBump, fragmentShader);
 		GLES20.glLinkProgram(GraphicTools.sp_ImageBump);
 
+        /*// Create lighted bump map shader with texture
+        vertexShader = GraphicTools.loadShader(GLES20.GL_VERTEX_SHADER, GraphicTools.vs_Image_Lighting_Bump);
+        fragmentShader = GraphicTools.loadShader(GLES20.GL_FRAGMENT_SHADER, GraphicTools.fs_Image_Lighting_Bump);
+        GraphicTools.sp_ImageLightingBump = GLES20.glCreateProgram();
+        GLES20.glAttachShader(GraphicTools.sp_ImageLightingBump, vertexShader);
+        GLES20.glAttachShader(GraphicTools.sp_ImageLightingBump, fragmentShader);
+        GLES20.glLinkProgram(GraphicTools.sp_ImageLightingBump);*/
+
 		// Text shader
 		int vshadert = GraphicTools.loadShader(GLES20.GL_VERTEX_SHADER,
 				GraphicTools.vs_Text);
@@ -187,23 +279,109 @@ public class GLRenderer implements Renderer {
 		GLES20.glAttachShader(GraphicTools.sp_Text, fshadert);
 		GLES20.glLinkProgram(GraphicTools.sp_Text);
 
+
+		// Set our shader programm
+		//GLES20.glUseProgram(GraphicTools.sp_Image);
 	}
+
+	/*private void DrawBackground(){
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        sky.Draw(globals.orthoMatrix, new Vector3f(0f, 0f, 0f), new Vector3f(0f, 0f, 0f), 1f);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+    }*/
 
 	private void Render() {
 
 	    testText = Integer.toString(FPS) + " FPS";
+	    globals.lightPosition[0] = globals.test.x;
+	    globals.lightPosition[1] = globals.test.y;
+	    globals.lightPosition[2] = globals.test.z;
+
+
 
 	    UpdateWorldMatrix();
 
+	    //create shadows, and draw them to the render buffer and textureIDs[0], not to the screen yet
+        //EraseShadows();
+        //keeps.DrawShadow(globals);
+
+        // Bind the default framebuffer (to render to the screen) - indicated by '0', this has been added because of shadow map FBO
+        //GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+
 		// clear Screen and Depth Buffer, we have set the clear color as black.
+        // Set the clear color to black
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1);
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
 		//draw 3d objects
-		grass.Draw(globals, Vector3f.ZERO, Vector3f.ZERO, 1.0f);
-		keep.DrawShaddow(globals, LocAngScale.ZERO_ONE());
-		keep.Draw(globals, LocAngScale.ZERO_ONE());
+		sky.DrawHUDFullScreen(globals, Vector3f.ZERO, Vector3f.ZERO);
+		grass.Draw(globals, new Vector3f(0f, 0f, 0f), Vector3f.ZERO, 1f);
 
-        glText.DrawHUD(globals, testText, new PointF(0f, 0f));
+		LocAngScale catapultPos = new LocAngScale(new Vector3f(0f, 0f, 0f),
+                                new Vector3f(0f, 0f, 0f),
+                new Vector3f(0.2f, 0.2f, 0.2f));
+                                //new Vector3f(1f, 1f, 1f));
+                                //
+		//keep.DrawShadow(globals,catapultPos);
+		//keep.Draw(globals, catapultPos);
+
+		catapult.DrawShadow(globals, catapultPos);
+		catapult.Draw(globals, catapultPos);
+
+
+
+        //draw map/floor
+        //sky.DrawHUDFullScreen(globals, Vector3f.ZERO, Vector3f.ZERO);
+        //sky.Draw(globals, Vector3f.ZERO, Vector3f.ZERO, 1f);
+		//map.Draw(globals);
+
+        //draw shadows
+		//shadowRec.SetTextureIndex(0);//testing shadow map wich is drawn to textureIDs[0]
+		//shadowRec.DrawHUDFullScreen(globals, Vector3f.ZERO, Vector3f.ZERO);
+        //shadowRec.DrawHUD(globals, Vector3f.ZERO, Vector3f.ZERO, globals.scale);
+        //shadowRec.DrawShadow(globals);
+
+		//keeps.DrawShadow(globals);
+
+        //draw full objects
+        //wall.Draw(globals);
+        //keeps.Draw(globals);
+
+        //DrawBackground();//sky
+
+
+
+        //draw map tiles
+        //
+
+        //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);// must do this after bumptext
+
+		//modelRec.Draw(globals.viewProjMatrix, new Vector3f(0f, 0f, -20f), new Vector3f(0f, 0f, 0f), 1f);
+
+
+        //catapult.position.location.z = 0.5f;
+        //catapult.position.scales = new Vector3f(0.2f, 0.2f, 0.2f);
+        //catapult.Draw(globals);
+
+
+		//test.Draw(globals, LocAngScale.ZERO_ONE());
+        //test.DrawShaddow(globals, LocAngScale.ZERO_ONE());
+
+
+        //glText.Draw(globals.orthoMatrix, testText, new PointF(0f, 0f));
+
+        //testText = globals.test.toString();
+        //testText = Integer.toString(FPS);
+        //glText.DrawHUD(globals, testText, new PointF(0f, 0f));
+
+
+
+
+        //collision test
+        //dot.Draw(globals, testLoc);
+        //testText = Integer.toString(wall.CheckHitLocation(testLoc));
+		//testText = Boolean.toString(wall.CheckHit(testLoc));
+
 
 	}
 
@@ -220,8 +398,8 @@ public class GLRenderer implements Renderer {
                 // Modify rotational angles according to movement
                 deltaX = currentX - lastScreenTouch.x;
                 deltaY = currentY - lastScreenTouch.y;
-                cameraPosition.x += deltaX * TOUCH_SCALE_FACTOR;
-                cameraPosition.y -= deltaY * TOUCH_SCALE_FACTOR;
+                globals.cameraPosition.x += deltaX * TOUCH_SCALE_FACTOR;
+                globals.cameraPosition.y -= deltaY * TOUCH_SCALE_FACTOR;
                 /*cameraAngles.x -= deltaY * TOUCH_SCALE_FACTOR;
                 cameraAngles.y -= deltaX * TOUCH_SCALE_FACTOR;*/
                 break;
@@ -234,39 +412,22 @@ public class GLRenderer implements Renderer {
 
 		float[] tempMatrix = new float[16];
 
-		// Clear our matrices
-		for(int i=0;i<16;i++)
-		{
-			globals.perspectiveMatrix[i] = 0.0f;
-            globals.cameraViewMatrix[i] = 0.0f;
-            globals.orthoMatrix[i] = 0.0f;
-		}
+		Vector3f camera = globals.cameraPosition.Copy();
+		camera.Multiply(globals.scale);
 
-		//set camera looking along z axis, good for 2D games
-		Matrix.setLookAtM(globals.cameraViewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0.0f);
-        globals.viewMatrix = globals.cameraViewMatrix.clone();
-
-		//rotate camera
-		float[] moveMatrix = new float[16];
-        Matrix.setIdentityM(moveMatrix, 0);
-        Matrix.translateM(moveMatrix, 0, cameraPosition.x,
-                                                cameraPosition.y,
-                                                cameraPosition.z);//move
-
-		Matrix.rotateM(moveMatrix, 0, cameraAngles.x, 1f, 0f, 0f);
-		Matrix.rotateM(moveMatrix, 0, cameraAngles.y, 0f, 1f, 0f);
-		Matrix.rotateM(moveMatrix, 0, cameraAngles.z, 0f, 0f, 1f);
-		Matrix.multiplyMM(tempMatrix, 0, globals.cameraViewMatrix, 0, moveMatrix, 0);
-        globals.cameraViewMatrix = tempMatrix.clone();
+		//set camera position and angles
+		Matrix.setLookAtM(globals.cameraViewMatrix, 0, camera.x, -camera.y, camera.z,
+                                                        0f, 0f, 0f,
+                                                            0f, 1f, 0.0f);
 
 		// Setup our screen width and height for ortho projection
-		//Matrix.orthoM(orthoMatrix, 0, -mScreenWidth/2, mScreenWidth/2, -mScreenHeight/2, mScreenHeight/2, 0, 10);
-        Matrix.orthoM(globals.HUDMatrix, 0, 0f, globals.glScreenWidth, 0f, globals.glScreenHeight, 0.1f, -100f);//GetMatrix();
-		Matrix.orthoM(globals.orthoMatrix, 0, 0f, globals.glScreenWidth * scale, globals.glScreenHeight * scale, 0f,
-                -1f, 100f);
+        Matrix.orthoM(globals.HUDMatrix, 0, 0f, globals.glScreenWidth, 0f, globals.glScreenHeight, 0.01f, -100f);//GetMatrix();
+		Matrix.orthoM(globals.orthoMatrix, 0, -(globals.glScreenWidth/2) * globals.scale, (globals.glScreenWidth/2) * globals.scale,
+                                                    (globals.glScreenHeight/2) * globals.scale, -(globals.glScreenHeight/2) * globals.scale,
+                                                            -1f, 100f);
 
 		// Setup perspective projection matrix
-		Matrix.perspectiveM(globals.perspectiveMatrix, 0, 15f * scale, globals.aspectRatio, 0.1f, -100f);
+		Matrix.perspectiveM(globals.perspectiveMatrix, 0, 45, globals.aspectRatio, 0.1f, -100f);
 		tempMatrix = new float[16];
 		Matrix.multiplyMM(tempMatrix, 0, globals.perspectiveMatrix, 0, globals.cameraViewMatrix, 0);//add camera matrix to perspective
         globals.perspectiveMatrix = tempMatrix.clone();
@@ -282,28 +443,28 @@ public class GLRenderer implements Renderer {
 
 		switch (keyCode){
             case KeyEvent.KEYCODE_COMMA:
-                scale -= .1f;
+                globals.scale -= .01f;
                 break;
             case KeyEvent.KEYCODE_PERIOD:
-                scale += .1f;
+                globals.scale += .01f;
                 break;
 			case KeyEvent.KEYCODE_DPAD_LEFT:
-				cameraPosition.x -= .1f;
+				globals.test.x -= .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_RIGHT:
-				cameraPosition.x += .1f;
+				globals.test.x += .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_UP:
-				cameraPosition.y += .1f;
+				globals.test.y += .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_DOWN:
-				cameraPosition.y -= .1f;
+				globals.test.y -= .1f;
 				break;
 			case 69://minus
-				cameraPosition.z -= .1f;
+				globals.test.z -= .1f;
 				break;
 			case 70://addition
-				cameraPosition.z += .1f;
+				globals.test.z += .1f;
 				break;
             case KeyEvent.KEYCODE_B:
                 globals.debuging = !globals.debuging;
@@ -320,17 +481,17 @@ public class GLRenderer implements Renderer {
             case KeyEvent.KEYCODE_S:
                 testLoc.z -= .01f;
                 break;
-            case KeyEvent.KEYCODE_Q:
-                testLoc.y -= .01f;
+            case KeyEvent.KEYCODE_F:
+                globals.test2.y -= 1;
                 break;
-            case KeyEvent.KEYCODE_E:
-                testLoc.y += .01f;
+            case KeyEvent.KEYCODE_H:
+                globals.test2.y += 1;
                 break;
             case KeyEvent.KEYCODE_T:
-                z += .1f;
+                globals.test2.x += 1;
                 break;
             case KeyEvent.KEYCODE_G:
-                z -= .1f;
+                globals.test2.x -= 1;
                 break;
 			case KeyEvent.KEYCODE_1:
 				globals.test.x += 1;
@@ -344,6 +505,7 @@ public class GLRenderer implements Renderer {
 			case KeyEvent.KEYCODE_4:
 				globals.test.y -= 1;
 				break;
+
             /*case KeyEvent.KEYCODE_COMMA:
                 keep.position.angles.y -= .1f;*/
 			case KeyEvent.KEYCODE_P:
@@ -355,5 +517,69 @@ public class GLRenderer implements Renderer {
 	public void ProcessKeyDown(int KeyCode, KeyEvent event){
 	    /*testText = "";
         testText += (char) event.getUnicodeChar();*/
+    }
+
+    /*public void EraseShadows(){
+        // setup to render to frame buffer instead of screen from the sun's point of view, to textureID's[0]
+        // bind the generated framebuffer
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, globals.fb[0]);
+
+        GLES20.glViewport(0, 0, globals.screenWidth, globals.screenHeight);
+
+        // Clear color and buffers
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
+    }*/
+
+    // create a frame buffer object, which will render to textureIDs[0] for later use in shadow mapping
+    public void GenerateShadowFBO()
+    {
+        // create a framebuffer object
+        GLES20.glGenFramebuffers(1, globals.fb, 0);
+
+        // create render buffer and bind 16-bit depth buffer
+        GLES20.glGenRenderbuffers(1, globals.depthRb, 0);
+        GLES20.glBindRenderbuffer(GLES20.GL_RENDERBUFFER, globals.depthRb[0]);
+        GLES20.glRenderbufferStorage(GLES20.GL_RENDERBUFFER, GLES20.GL_DEPTH_COMPONENT16, globals.screenWidth, globals.screenHeight);
+
+        // Try to use a texture depth component
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, globals.textureIDs[0]);
+
+        // GL_LINEAR does not make sense for depth texture. However, next tutorial shows usage of GL_LINEAR and PCF. Using GL_NEAREST
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
+
+        // Remove artifact on the edges of the shadowmap
+        GLES20.glTexParameteri( GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE );
+        GLES20.glTexParameteri( GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE );
+
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, globals.fb[0]);
+
+        if (!mHasDepthTextureExtension) {
+            GLES20.glTexImage2D( GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, globals.screenWidth, globals.screenHeight, 0,
+                                GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null);
+
+            // specify texture as color attachment
+            GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, globals.textureIDs[0], 0);
+
+            // attach the texture to FBO depth attachment point
+            // (not supported with gl_texture_2d)
+            GLES20.glFramebufferRenderbuffer(GLES20.GL_FRAMEBUFFER, GLES20.GL_DEPTH_ATTACHMENT, GLES20.GL_RENDERBUFFER, globals.depthRb[0]);
+        }
+        else {
+            // Use a depth texture
+            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_DEPTH_COMPONENT, globals.screenWidth, globals.screenHeight, 0,
+                                GLES20.GL_DEPTH_COMPONENT, GLES20.GL_UNSIGNED_INT, null);
+
+            // Attach the depth texture to FBO depth attachment point
+            GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_DEPTH_ATTACHMENT, GLES20.GL_TEXTURE_2D, globals.textureIDs[0], 0);
+        }
+
+        // check FBO status
+        int FBOstatus = GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER);
+        if(FBOstatus != GLES20.GL_FRAMEBUFFER_COMPLETE) {
+            Log.e(TAG, "GL_FRAMEBUFFER_COMPLETE failed, CANNOT use FBO");
+            throw new RuntimeException("GL_FRAMEBUFFER_COMPLETE failed, CANNOT use FBO");
+        }
     }
 }

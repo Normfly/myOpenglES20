@@ -3,6 +3,7 @@ package org.normware.myopengl2;
 import android.graphics.PointF;
 
 import static org.normware.myopengl2.Collisions.GetAngle;
+import static org.normware.myopengl2.Collisions.GetXYfromRadian;
 
 public class Vector3f {
     public final static Vector3f ZERO = new Vector3f(0f, 0f, 0f);
@@ -77,9 +78,12 @@ public class Vector3f {
     }
 
     public void RotateAroundX(Vector3f center, float angle){//z takes x place
+        y -= center.y;
+        z -= center.z;
+        y = -y;
         if (angle == 0  || (z == 0 && y == 0)){return;}//otherwise cos(0) returns 1 * distance
         double rad = Math.toRadians(angle + GetAngle(z, -y));//get current angle and get rotation amount
-        float distance = GetDistance(new PointF(z - center.z, y - center.y));
+        float distance = GetDistance(new PointF(z, y));
 
         PointF result = new PointF(((float)Math.sin(rad) * distance),
                                     ((float)-Math.cos(rad) * distance));
@@ -89,9 +93,11 @@ public class Vector3f {
     }
 
     public void RotateAroundY(Vector3f center, float angle){//z takes y place
+        x -= center.x;
+        z -= center.z;
         if (angle == 0 || (x == 0 && z == 0)){return;}//otherwise cos(0) returns 1 * distance
         double rad = Math.toRadians(angle + GetAngle(x, -z));//get current angle and get rotation amount
-        float distance = GetDistance(new PointF(x - center.x, z - center.z));
+        float distance = GetDistance(new PointF(x, z));
 
         PointF result = new PointF(((float)Math.sin(rad) * distance),
                                     ((float)-Math.cos(rad) * distance));
@@ -101,9 +107,12 @@ public class Vector3f {
     }
 
     public void RotateAroundZ(Vector3f center, float angle){
+        x -= center.x;
+        y -= center.y;
+        y = -y;
         if (angle == 0  || (x == 0 && y == 0)){return;}//otherwise cos(0) returns 1 * distance
         double rad = Math.toRadians(GetAngle(x, y) + angle);//get current angle and get rotation amount
-        float distance = GetDistance(new PointF(x - center.x, y - center.y));
+        float distance = GetDistance(new PointF(x, y));
 
         PointF result = new PointF(((float)Math.sin(rad) * distance),
                                     ((float)-Math.cos(rad) * distance));
@@ -208,4 +217,25 @@ public class Vector3f {
     }
 
     public final Vector3f Copy(){return new Vector3f(x, y, z);}
+
+    public String toString(){
+        return Float.toString((int)x) + Float.toString((int)y) + Float.toString((int)z);
+    }
+
+    public Vector3f Multiply(float amount){return Multiply(amount, amount, amount);}
+
+    public void MoveTo(float distance){
+        float magnitude = (float)(Math.sqrt((x * x) + (y * y)  + (z * z)));
+        float xRatio = x / magnitude;
+        float yRatio = y / magnitude;
+        float zRatio = z / magnitude;
+        x = distance * xRatio;
+        y = distance * yRatio;
+        z = distance * zRatio;
+    }
+
+    public float GetDistance(){
+        float result = (float)Math.sqrt((x * x) + (y * y) + (z * z));
+        return result;
+    }
 }

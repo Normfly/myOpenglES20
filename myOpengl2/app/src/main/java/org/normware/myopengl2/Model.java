@@ -17,30 +17,26 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static javax.microedition.khronos.opengles.GL10.GL_BLEND;
 import static javax.microedition.khronos.opengles.GL10.GL_REPEAT;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_2D;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_S;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_T;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
-import static org.normware.myopengl2.Constants.BYTES_PER_INT;
-import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
 import static org.normware.myopengl2.Constants.INPUT_BUFFER_SIZE;
 
 public class Model {
     // blender OBJ export y up, write normals, include UVs, write materials, triangulate faces (extrude faces, then remove 0,0 vt's)
 
-
+    public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false);
     private FloatBuffer vertexBuffer;  // Buffer for vertex-array
     private FloatBuffer normalBuffer; // Buffer for normals array
     private FloatBuffer texBuffer; // Buffer for textures
     private ShortBuffer indexBuffer;    // Buffer for index-array
-    private FloatBuffer shadowVertexBuffer;// Buffer for vertex array for shaddow (flat)
+    //private FloatBuffer shadowVertexBuffer;// Buffer for vertex array for shaddow (flat)
     protected int vertexCount;
     protected int indexCount;
     protected int textureCount;
@@ -86,7 +82,9 @@ public class Model {
 
     private void readOBJText(Globals globals, Context context, @NonNull InputStream stream) throws IOException {
         // position/texture/normals
-        // blender export options - write normals
+        // blender export options -
+        // export -y up / z forward
+        // write normals
         // include UV's
         // write materials
         // triangulate faces
@@ -174,10 +172,8 @@ public class Model {
             indicesArray[i] = s;//indices.get(i);
         }
 
-        // Build non indexed vertex array, normals array, texture coords array
+        // Build non indexed vertex array
         verticesArray = new float[indicesArray.length * 3];//3 floats x,y,z per index for vertices
-        //normalsArray = new float[indicesArray.length * 3];// 3 floats x,y,z per index for normals
-        //textureArray = new float[indicesArray.length * 2];// 2 floats u,v per index for texture coordinates
 
         for (int i = 0; i < indicesArray.length; i++){//once per x,y,z
             //rebuild vertices
@@ -186,15 +182,6 @@ public class Model {
             verticesArray[i * 3] = v.x;
             verticesArray[(i * 3) + 1] = v.y;
             verticesArray[(i * 3) + 2] = v.z;
-            /*//rebuild normals
-            Vector3f n = normals.get(indices.get(i));
-            normalsArray[i * 3] = n.x;
-            normalsArray[(i * 3) + 1] = n.y;
-            normalsArray[(i * 3) + 2] = n.z;
-            //rebuild texture coordinates
-            PointF t = textures.get(indices.get(i));
-            textureArray[i * 2] = t.x;
-            textureArray[(i * 2) + 1] = t.y;*/
 
             BuildBoundingBox(v);
         }
@@ -234,7 +221,7 @@ public class Model {
         indexBuffer.put(indicesArray);
         indexBuffer.position(0);*/
 
-        if (shadowed){BuildShaddow(fullVertices, globals);}
+        //if (shadowed){BuildShaddow(fullVertices, globals);}
 
         // Load textures
         //get the resource id from the file name
@@ -284,36 +271,6 @@ public class Model {
         }
     }
 
-    private void BuildShaddow(List<Vector3f> vertices, Globals globals){
-
-        //doesn't rotate or scale, would need to be redone
-
-
-        float floor = boundingBoxCube.frontBack.bottom + 0.01f;
-        Vector3f lightPos = Vector3f.FloatToVector3f(globals.lightPosition);
-        float[] shaddowertexArray = new float[vertices.size() * 3];
-        int ii = 0;
-
-        for (int i = 0; i < vertices.size(); i++){
-            //flatten and move vertices to feet
-            //Vector3f newVertex = vertices.get(i).FlipY();//
-            Vector3f newVertex = Vector3f.FlattenToY(vertices.get(i).FlipY(), lightPos, floor);
-            //Vector3f newVertex = Collisions.RayIntersectY(vertices.get(i).FlipY(), lightPos, floor);
-            shaddowertexArray[ii++] = newVertex.x;
-            shaddowertexArray[ii++] = newVertex.y;
-            shaddowertexArray[ii++] = newVertex.z;
-
-        }
-
-        // Build vertex buffer
-        ByteBuffer vbb = ByteBuffer.allocateDirect(vertexCount * BYTES_PER_FLOAT);
-        vbb.order(ByteOrder.nativeOrder());
-        shadowVertexBuffer = vbb.asFloatBuffer();
-        shadowVertexBuffer.put(shaddowertexArray);
-        shadowVertexBuffer.position(0);
-
-    }
-
     private static void processVertex(String[] vertexData, List<Integer> indices, List<PointF> textures,
                                       List<Vector3f> normals, float[] textureArray, float[] normalsArray){
 
@@ -331,43 +288,82 @@ public class Model {
         normalsArray[(index * 3) + 2] = currentNorm.z;
     }
 
-    // Render shaddow
-    public void DrawShaddow(Globals globals, LocAngScale modelPos) {
-
+    // Render the shapes shadow
+    public void DrawShadow(Globals globals, LocAngScale modelPos){
         if (!shadowed){return;}
 
-        LocAngScale shadowPos = modelPos.Copy();
-        shadowPos.location.y = -0.01f;//tweak to bring above ground, with depth test on
+            // setup to render to frame buffer instead of screen from the sun's point of view, to textureID's[0]
+            // bind the generated framebuffer
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, globals.fb[0]);
+
+            GLES20.glViewport(0, 0, globals.screenWidth, globals.screenHeight);
+
+            // Clear color and buffers
+            GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
+
+
+        // render to textureIDs[0]
 
         float[] modelMatrix = new float[16];
         float[] projectionMatrix = new float[16];
         float[] finalMatrix = new float[16];
+        float[] sunMatrix = new float[16];
+        float[] tempMatrix = new float[16];
+        float[] viewProjMatrix = new float[16];
+
+        //view from light source point of view
+
+        //move light position to same distance as camera distance from 0,0,0, just spin around 0,0,0 to light source
+        Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]);
+        float cameraDist = globals.cameraPosition.GetDistance();
+        lightPos.MoveTo(cameraDist);
+
+        //sun location looking at the center
+        Matrix.setLookAtM(sunMatrix, 0, lightPos.x, -lightPos.y,lightPos.z,
+                                                0f, 0f, 0f,
+                                                0f, 1f, 0f);
+                //globals.lightPosition[0], -globals.lightPosition[1], globals.lightPosition[2],
+
+        //projection matrix plus sun
+        Matrix.perspectiveM(projectionMatrix, 0, 45f, 1f, 0.1f, -100f);
+        tempMatrix = new float[16];
+        Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, sunMatrix, 0);//add camera matrix to perspective
 
         //translate
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
 
-        Matrix.translateM(modelMatrix, 0, shadowPos.location.x,
-                -shadowPos.location.y,
-                shadowPos.location.z);//move
+        //rotate
+        Matrix.rotateM(modelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
+        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
+        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
+
+       /* //translate //do not translate, so that shadow is located at 0,0,0
+        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
+                -modelPos.location.y,
+                modelPos.location.z);//move*/
+
+        //scale
+        Matrix.scaleM(modelMatrix, 0, modelPos.scales.x,
+                modelPos.scales.y,
+                modelPos.scales.z);//scale
 
         //perspective view matrix
-        Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix
-        finalMatrix = projectionMatrix.clone();//final matrix created
-
+        Matrix.multiplyMM(viewProjMatrix, 0, tempMatrix, 0, modelMatrix, 0);
+        //Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix
+        finalMatrix = viewProjMatrix.clone();//final matrix created
 
         GLES20.glUseProgram(GraphicTools.sp_SolidColor);//use shader programs
 
-        //GLES20.glDisable(GLES20.GL_DEPTH_TEST);
-
-        GLES20.glEnable(GLES20.GL_CULL_FACE);
-        GLES20.glEnable(GLES20.GL_FRONT);
-        GLES20.glEnable(GLES20.GL_BLEND);       // Turn blending on
-        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glDisable(GLES20.GL_CULL_FACE);
 
         // Get handle to color
         int colorHandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_Color");
         // pass color info to shader program
-        float[] color = new float[]{0f, 0f, 0f, 0.5f};
+        float[] color = new float[]{0.0f, 0f, 0f, 0.2f};
         GLES20.glUniform4fv(colorHandle, 1, color, 0);
 
         // Get handle to shape's transformation matrix
@@ -385,17 +381,20 @@ public class Model {
         // Prepare the triangle coordinate data
         GLES20.glVertexAttribPointer(mPositionHandle, 3,
                 GLES20.GL_FLOAT, false,
-                0, shadowVertexBuffer);
+                0, vertexBuffer);
 
-
-        //GLES20.glDrawArrays(GLES20.GL_POINTS, 0, 1);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount/3);
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
-        GLES20.glDisable(GLES20.GL_BLEND);
-        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 
+        //GLES20.glDisable(GLES20.GL_CULL_FACE);
+        //GLES20.glDisable(GLES20.GL_BLEND);// disable blending
+
+
+        shadowRec.DrawShadow(globals, modelPos);
+
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 
     }
 
@@ -573,6 +572,18 @@ public class Model {
             boundingBoxCube.leftRight.right = v.z;
         }
 
+    }
+
+    public void EraseShadows(Globals globals){
+        // setup to render to frame buffer instead of screen from the sun's point of view, to textureID's[0]
+        // bind the generated framebuffer
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, globals.fb[0]);
+
+        GLES20.glViewport(0, 0, globals.screenWidth, globals.screenHeight);
+
+        // Clear color and buffers
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
     }
 
 }

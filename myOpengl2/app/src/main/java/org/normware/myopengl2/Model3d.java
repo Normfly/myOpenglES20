@@ -16,6 +16,7 @@ public class Model3d {
     public void Draw(Globals globals){
         model.Draw(globals, position);
     }
+    public void DrawShadow(Globals globals){}
 
     public void LoadTexture(Globals globals, Context context, String imageName, int textureIndex, boolean shadowed){
         model.LoadModel( globals, context, imageName, textureIndex, shadowed);

@@ -53,7 +53,7 @@ public class Collisions {
     public static boolean CubeCollision(Cube cube, Vector3f vector){
         boolean leftRightHit, topBottomHit, frontBackHit;
         PointF p;
-        
+
         //do distance check first
         if (vector.Length() > cube.longestSize) return false;
 
@@ -256,8 +256,8 @@ public class Collisions {
 
         float ratio = x / amount.x;
         return new Vector3f(x,
-                        (amount.y * ratio) + vector.y,
-                        (amount.z * ratio) + vector.z);
+                (amount.y * ratio) + vector.y,
+                (amount.z * ratio) + vector.z);
     }
 
     public static Vector3f RayIntersectY(Vector3f vector, Vector3f direction, float y){
@@ -270,8 +270,8 @@ public class Collisions {
 
         float ratio = y / amount.y;
         return new Vector3f((amount.x * ratio) + vector.x,
-                            y,
-                        (amount.z * ratio) + vector.z);
+                y,
+                (amount.z * ratio) + vector.z);
     }
 
     public static Vector3f RayIntersectZ(Vector3f vector, Vector3f direction, float z){
@@ -294,5 +294,22 @@ public class Collisions {
     }
 
     public static float GetAngle(float x, float y){return GetAngle(new PointF(x, y));}
+
+    public static PointF GetXYfromRadian(float radian, float distance){
+        return new PointF(distance * (float)Math.cos(radian),
+                        distance * (float)Math.sin(radian));
+    }
+
+    public final static PointF GetXYfromAngle(float angle, float distance){
+        float radian = (float)Math.toRadians(angle);
+        return new PointF(distance * (float)Math.cos(radian),
+                distance * (float)Math.sin(radian));
+    }
+
+    public final static PointF RotatePointF(PointF center, PointF point, float angle){
+        Vector3f newPoint = new Vector3f(point.x, point.y, 0f);
+        newPoint.RotateAroundZ(new Vector3f(center.x, center.y, 0f), angle);
+        return new PointF(newPoint.x, newPoint.y);
+    }
 
 }

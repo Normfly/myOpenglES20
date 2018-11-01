@@ -2,12 +2,14 @@ package org.normware.myopengl2;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
+import static android.content.ContentValues.TAG;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
 import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
 
@@ -16,7 +18,7 @@ public class DrawDot {
     private float[] vertices = new float[3];//x,y,z
     private float[] color = new float[]{1f, 1f, 1f, 1f};//used to draw white color
 
-    public DrawDot(){//Vector3f location){
+    public DrawDot() {//Vector3f location){
         vertices[0] = 0f;//location.x;
         vertices[1] = 0f;//location.y;
         vertices[2] = 0f;//location.z;
@@ -39,8 +41,8 @@ public class DrawDot {
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
 
         Matrix.translateM(modelMatrix, 0, location.x,
-                                                -location.y,
-                                                location.z);//move
+                -location.y,
+                location.z);//move
 
         //perspective view matrix
         Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix
@@ -56,6 +58,7 @@ public class DrawDot {
         // Get handle to color
         int colorHandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_Color");
         // pass color info to shader program
+        color = new float[]{0.0f, 1.0f, 0.0f, 1.0f};
         GLES20.glUniform4fv(colorHandle, 1, color, 0);
 
         // Get handle to shape's transformation matrix
@@ -82,6 +85,6 @@ public class DrawDot {
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 
-
     }
+
 }

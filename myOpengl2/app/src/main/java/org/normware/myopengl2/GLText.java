@@ -142,7 +142,13 @@ public class GLText {
             rect.setRight(width);
             rectangleModel.UpdateTextureCoords(rect.getRect());
             position.x += size;
-            rectangleModel.Draw(globals, new Vector3f(position.x, -position.y, position.z), new Vector3f(0f, 0f, 0f), 1f, HUD);
+
+            if (HUD){
+                rectangleModel.DrawHUD(globals, new Vector3f(position.x, position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
+            }else{
+                rectangleModel.Draw(globals, new Vector3f(position.x, position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
+            }
+
         }
     }
 }

@@ -9,8 +9,6 @@ import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -21,6 +19,7 @@ import static javax.microedition.khronos.opengles.GL10.GL_REPEAT;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_2D;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_S;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_T;
+import static org.normware.myopengl2.Collisions.GetAngle;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
 import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
 
@@ -31,6 +30,7 @@ public class RectangleModel {
     private FloatBuffer vertexBuffer;  // Buffer for vertex-array
     private FloatBuffer texBuffer;    // Buffer for texture-coords-array
     private FloatBuffer bumpTexBuffer; // Buffer for bump map texture coords array
+    private FloatBuffer shadowTexBuffer;
     private ShortBuffer indexBuffer; // Buffer for vertex draw order index array
     private int textureIndex;
     private int bumpMapIndex = -1;
@@ -43,6 +43,13 @@ public class RectangleModel {
     short[] indices = new short[] {0, 1, 2, 0, 2, 3};
 
     float[] texCoords = { // Texture coords for the above face
+            0.0f, 0.0f,  // A. left-bottom
+            0.0f, 1.0f,  // B. left top
+            1.0f, 1.0f,  // C. right-top
+            1.0f, 0.0f   // D. right-bottom
+    };
+
+    float[] shadowTexCoords = { // Texture coords for the above face
             0.0f, 0.0f,  // A. left-bottom
             0.0f, 1.0f,  // B. left top
             1.0f, 1.0f,  // C. right-top
@@ -103,6 +110,7 @@ public class RectangleModel {
         vertexBuffer.position(0);           // Rewind
 
         CreateTextureCoordsBuffer();
+        CreateShadowTextureCoordsBuffer();
 
         // initialize byte buffer for the draw list
         ByteBuffer dlb = ByteBuffer.allocateDirect(indices.length * BYTES_PER_SHORT);
@@ -112,6 +120,11 @@ public class RectangleModel {
         indexBuffer.position(0);
 
     }
+
+    public void SetTextureIndex(int newIndex){textureIndex = newIndex;}
+
+    public FloatBuffer GetVertexBuffer(){return vertexBuffer;}
+    public int GetVertexCount(){return vertices.length;}
 
     public void UpdateTextureCoords(float[] texCoords){
         this.texCoords = texCoords;
@@ -125,6 +138,20 @@ public class RectangleModel {
         texBuffer = tbb.asFloatBuffer();
         texBuffer.put(texCoords);
         texBuffer.position(0);
+    }
+
+    public void UpdateShadowTextureCoords(float[] texCoords){
+        this.shadowTexCoords = texCoords;
+        CreateShadowTextureCoordsBuffer();
+    }
+
+    private void CreateShadowTextureCoordsBuffer(){
+        // Setup texture-coords-array buffer, in float. An float has 4 bytes
+        ByteBuffer tbb = ByteBuffer.allocateDirect(shadowTexCoords.length * BYTES_PER_FLOAT);
+        tbb.order(ByteOrder.nativeOrder());
+        shadowTexBuffer = tbb.asFloatBuffer();
+        shadowTexBuffer.put(shadowTexCoords);
+        shadowTexBuffer.position(0);
     }
 
     public void RandomizeTextureCoords(int seed){
@@ -156,7 +183,19 @@ public class RectangleModel {
         Draw(globals, position, angles, scale, false);
     }
 
-    public void Draw(Globals globals, Vector3f position, Vector3f angles, float scale, boolean HUD) {
+    public void DrawHUD(Globals globals, Vector3f position, Vector3f angles, float scale){
+        Draw(globals, position, angles, scale, true);
+    }
+
+    public void DrawHUDFullScreen(Globals globals, Vector3f position, Vector3f angles){
+        Draw(globals, position, angles, new PointF(globals.glScreenWidth, globals.glScreenHeight), true);
+    }
+
+    private void Draw(Globals globals, Vector3f position, Vector3f angles, float scale, boolean HUD) {
+        Draw(globals, position, angles, new PointF(scale, scale), HUD);
+    }
+
+    private void Draw(Globals globals, Vector3f position, Vector3f angles, PointF scale, boolean HUD) {
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
@@ -171,12 +210,14 @@ public class RectangleModel {
         Matrix.rotateM(modelMatrix, 0, angles.y, 0f, 1f, 0f);
         Matrix.rotateM(modelMatrix, 0, angles.z, 0f, 0f, 1f);
         //scale
-        Matrix.scaleM(modelMatrix, 0, scale, scale, 1);//scale
+        Matrix.scaleM(modelMatrix, 0, scale.x, scale.y, 1);//scale
 
         //choose ortho or perspective view matrix
         if (HUD){
+            GLES20.glDisable(GLES20.GL_DEPTH_TEST);
             Matrix.multiplyMM(projectionMatrix, 0, globals.HUDMatrix, 0, modelMatrix, 0);//projection matrix
         }else{
+            GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//projection matrix
         }
 
@@ -191,7 +232,7 @@ public class RectangleModel {
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
 
-        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+
 
         //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
 
@@ -206,7 +247,7 @@ public class RectangleModel {
             GLES20.glUseProgram(shaderProgram);//use shader programs
             // Get handle to textures locations
             int texLoc = GLES20.glGetUniformLocation (shaderProgram, "u_texture" );
-            //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, globals.textureIDs[textureIndex]);
             // Set the sampler texture unit to 0, where we have saved the texture.
             GLES20.glUniform1i ( texLoc, 0);
@@ -289,6 +330,102 @@ public class RectangleModel {
         GLES20.glDisableVertexAttribArray(mTexCoordLoc);
 
         //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+    }
+
+    public void DrawShadow(Globals globals, LocAngScale modelPos){
+
+        // Bind the default framebuffer (to render to the screen) - indicated by '0', this has been added because of shadow map FBO
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+
+        //PointF scale = new PointF(globals.glScreenSize, globals.glScreenSize);
+        PointF scale = new PointF(globals.glScreenSize, globals.glScreenSize);
+
+        //rotate texture
+        float lightAngle = GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
+
+        // Matrix transformations
+        float[] modelMatrix = new float[16];
+        float[] finalMatrix;
+        float[] projectionMatrix = new float[16];
+
+        //translate rotate and scale
+        Matrix.setIdentityM(modelMatrix, 0);//set to 0
+        //Matrix.translateM(modelMatrix, 0, 0f, 0f, 0f);//move
+        Matrix.translateM(modelMatrix, 0, modelPos.location.x, modelPos.location.y, modelPos.location.z);
+        //rotate
+        Matrix.rotateM(modelMatrix, 0, 0f, 1f, 0f, 0f);
+        Matrix.rotateM(modelMatrix, 0, lightAngle, 0f, 1f, 0f);
+        Matrix.rotateM(modelMatrix, 0, 0f, 0f, 0f, 1f);
+        //scale
+        Matrix.scaleM(modelMatrix, 0, scale.x, scale.y, scale.y);//scale
+
+        //GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        //GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+
+        Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//projection matrix
+
+        finalMatrix = projectionMatrix.clone();//final matrix created
+
+        GLES20.glEnable(GLES20.GL_TEXTURE_2D);  // Enable texture
+        //texture filtering
+        GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        GLES20.glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, globals.textureIDs[0]);// 0 = shadow texture ID
+
+        //GLES20.glEnable(GLES20.GL_CULL_FACE);
+        //GLES20.glEnable(GLES20.GL_FRONT);// draw front and back face
+
+        int shaderProgram = GraphicTools.sp_Image;
+        GLES20.glUseProgram(shaderProgram);//use shader programs
+        // Get handle to textures locations
+        int texLoc = GLES20.glGetUniformLocation (shaderProgram, "u_texture" );
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+
+        GLES20.glUniform1i ( texLoc, 0);
+
+        // transparency stuff
+        GLES20.glEnable(GLES20.GL_BLEND);       // Turn blending on
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);// transparency and lighting
+
+        // Get handle to shape's transformation matrix
+        int mtrxhandle = GLES20.glGetUniformLocation(shaderProgram, "u_MVPMatrix");
+
+        // Apply the projection and view transformation
+        GLES20.glUniformMatrix4fv(mtrxhandle, 1, false, finalMatrix, 0);
+
+        // get handle to vertex shader's vPosition member
+        int mPositionHandle = GLES20.glGetAttribLocation(shaderProgram, "a_Position");
+
+        // Enable generic vertex attribute array
+        GLES20.glEnableVertexAttribArray(mPositionHandle);
+
+        // Prepare the triangle coordinate data
+        GLES20.glVertexAttribPointer(mPositionHandle, 3,
+                GLES20.GL_FLOAT, false,
+                0, vertexBuffer);
+
+        // Get handle to texture coordinates location
+        int mTexCoordLoc = GLES20.glGetAttribLocation(shaderProgram, "a_texCoord" );
+
+        // Enable generic vertex attribute array
+        GLES20.glEnableVertexAttribArray ( mTexCoordLoc );
+
+        // Prepare the texturecoordinates
+        GLES20.glVertexAttribPointer ( mTexCoordLoc, 2, GLES20.GL_FLOAT,
+                false,
+                0, shadowTexBuffer);
+
+        // Draw the triangle
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, indices.length,
+                GLES20.GL_UNSIGNED_SHORT, indexBuffer);
+
+        // Disable vertex array
+        GLES20.glDisableVertexAttribArray(mPositionHandle);
+        GLES20.glDisableVertexAttribArray(mTexCoordLoc);
+
+        //GLES20.glEnable(GLES20.GL_DEPTH_TEST);
     }
 
     // Generate textures, returns next texture index

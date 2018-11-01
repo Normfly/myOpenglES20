@@ -11,7 +11,7 @@ Ni 1.000000
 d 1.000000
 illum 1
 map_Kd C:\Users\normf\Documents\Blender Stuff\catapult.jpg
-map_Bump -bm -2.309260 C:\\Users\\normf\\Documents\\Blender Stuff\\catapult_uv.jpg
+map_Bump -bm -2.309260 C:\\Users\\normf\\Documents\\Blender Stuff\\catapultuv.jpg
 
 newmtl gestell
 Ns 0.000000
@@ -23,4 +23,4 @@ Ni 1.000000
 d 1.000000
 illum 1
 map_Kd C:\Users\normf\Documents\Blender Stuff\catapult.jpg
-map_Bump -bm -2.309260 C:\\Users\\normf\\Documents\\Blender Stuff\\catapult_uv.jpg
+map_Bump -bm -2.309260 C:\\Users\\normf\\Documents\\Blender Stuff\\catapultuv.jpg
