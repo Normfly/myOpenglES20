@@ -26,11 +26,11 @@ public class Globals extends Application {
 
     //camera
     //public Vector3f cameraAngles = new Vector3f(30f, 0f, 0f);
-    public Vector3f cameraPosition = new Vector3f(0f, -5f, 10f);
+    public Vector3f cameraPosition = new Vector3f(0f, -2f, 4f);
 
     // Lighting
     public float[] lightAmbient = {1.0f, 1.0f, 1.0f, 0.2f};//ambient light color, last number is brightness
-    public float[] lightPosition = new float[]{-10.0f, -5f, 10.0f, 1.0f};//sun position, last number is brightness, leave first three 0.0f to just use light direction, not position (the sun)
+    public float[] lightPosition = new float[]{-10.0f, -5f, 0.0f, 1.0f};//sun position, last number is brightness, leave first three 0.0f to just use light direction, not position (the sun)
     //public float[] lightDirection = new float[]{0.0f, -1.0f, 0.0f};//light direction, keep 1.0f and under
 
     // Our matrices

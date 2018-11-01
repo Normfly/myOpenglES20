@@ -57,23 +57,10 @@ public class GLRenderer implements Renderer {
 	private Vector3f testLoc = new Vector3f(0f, 0f, 0f);
 
 	//3d models
-    //public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false);
     public RectangleModel sky = new RectangleModel(new PointF(1f, 1f), false, false, true);
     public RectangleModel grass = new RectangleModel(new PointF(10f, 10f), false, true, false);
     public Model keep = new Model(false, true, 1.0f);
     public Model catapult = new Model(false, true, 1.0f);
-
-    //public Map map = new Map();
-    //public Wall wall = new Wall();
-    // public Animation wall = new Animation();
-	//RectangleModel modelRec = new RectangleModel(new PointF(20f, 20f), false, true, true);
-    /*Model3d keep = new Model3d("test", true, true, 1.0f,
-            new LocAngScale(0f, 0.0f, 0f,//location
-                    0f, 0f, 0f,//rotations
-                    1.0f, 1.0f, 1.0f));//size*/
-
-    //public Model test = new Model(false, false, 1.0f);
-
 
     //Keeps keeps = new Keeps(2);
 	GLText glText = new GLText();
@@ -163,14 +150,10 @@ public class GLRenderer implements Renderer {
 
         //load textures
 		GLES20.glGenTextures(globals.textureIDs.length, globals.textureIDs, 0);  // Generate texture-ID array
-		//modelRec.LoadTexture(mContext, R.drawable.ic_launcher, texturePntr++);
 
         //if going more than 10, make sure to update textureIDs
 
         texturePntr = 1;//save 0 for shadow
-		//texturePntr = map.Load(globals, mContext, texturePntr);
-        //texturePntr = LoadKeeps(texturePntr);
-		//texturePntr = LoadWall(texturePntr);
 
         sky.LoadTexture(globals, mContext, R.raw.sky, texturePntr++);
         grass.LoadTexture(globals, mContext, R.raw.grass, texturePntr++);
@@ -182,44 +165,7 @@ public class GLRenderer implements Renderer {
 
         keep.LoadModel(globals, mContext, "keep", texturePntr++, true);
         catapult.LoadModel(globals, mContext, "Catapult", texturePntr++, true);
-
-		//test.LoadModel(globals, mContext, "wallstraight", texturePntr++, true);
-
-
-
-
-               /* Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.raw.catapult);
-                GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,  3);
-                GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-                bitmap.recycle();*/
-
-
-
-
 	}
-
-	/*private int LoadKeeps(int textureIndex){
-	    keeps.LoadKeep(globals, mContext, textureIndex++);
-	    keeps.location[0] = new Vector3f(0f, -0.0f, -2f);
-	    keeps.location[1] = new Vector3f(0f, -0.0f, 2f);
-        return textureIndex;
-    }
-
-	private int LoadWall(int textureIndex){
-	    textureIndex = wall.LoadWall(globals, mContext, textureIndex++);
-
-	    wall.AddWall(Wall.WALLSTRAIGHT, new Vector3f(1.0f, 0f, 0f), new Vector3f(0f, 0f, 0f), 0);
-	    wall.AddWall(Wall.WALLSTRAIGHT, new Vector3f(0f, 0f, 0f), Vector3f.ZERO, 0);
-	    wall.AddWall(Wall.WALLSTRAIGHT, new Vector3f(-1f, 0f, 0f), Vector3f.ZERO, 0);
-	   *//* String[] imageNames = new String[]{"wallstraight", "wallsingle"};
-	    textureIndex = wall.LoadTexture(mContext, imageNames, textureIndex,true, true, 1.0f, true,
-                new LocAngScale(0f, 0.0f, 0f,//location
-                                0f, 0f, 0f,//rotations
-                                1.0f, 1.0f, 1.0f));//bounding box size and location*//*
-	    *//*wall.AddAnimation("test", 0, 1, true, 10);
-	    wall.SetCurrentAnimation("test");*//*
-	    return textureIndex;
-    }*/
 
 	private void SetupShaderPrograms(){
 		// load shader text
@@ -260,14 +206,6 @@ public class GLRenderer implements Renderer {
 		GLES20.glAttachShader(GraphicTools.sp_ImageBump, fragmentShader);
 		GLES20.glLinkProgram(GraphicTools.sp_ImageBump);
 
-        /*// Create lighted bump map shader with texture
-        vertexShader = GraphicTools.loadShader(GLES20.GL_VERTEX_SHADER, GraphicTools.vs_Image_Lighting_Bump);
-        fragmentShader = GraphicTools.loadShader(GLES20.GL_FRAGMENT_SHADER, GraphicTools.fs_Image_Lighting_Bump);
-        GraphicTools.sp_ImageLightingBump = GLES20.glCreateProgram();
-        GLES20.glAttachShader(GraphicTools.sp_ImageLightingBump, vertexShader);
-        GLES20.glAttachShader(GraphicTools.sp_ImageLightingBump, fragmentShader);
-        GLES20.glLinkProgram(GraphicTools.sp_ImageLightingBump);*/
-
 		// Text shader
 		int vshadert = GraphicTools.loadShader(GLES20.GL_VERTEX_SHADER,
 				GraphicTools.vs_Text);
@@ -279,34 +217,16 @@ public class GLRenderer implements Renderer {
 		GLES20.glAttachShader(GraphicTools.sp_Text, fshadert);
 		GLES20.glLinkProgram(GraphicTools.sp_Text);
 
-
-		// Set our shader programm
-		//GLES20.glUseProgram(GraphicTools.sp_Image);
 	}
-
-	/*private void DrawBackground(){
-        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
-        sky.Draw(globals.orthoMatrix, new Vector3f(0f, 0f, 0f), new Vector3f(0f, 0f, 0f), 1f);
-        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-    }*/
 
 	private void Render() {
 
 	    testText = Integer.toString(FPS) + " FPS";
-	    globals.lightPosition[0] = globals.test.x;
+	    /*globals.lightPosition[0] = globals.test.x;
 	    globals.lightPosition[1] = globals.test.y;
-	    globals.lightPosition[2] = globals.test.z;
-
-
+	    globals.lightPosition[2] = globals.test.z;*/
 
 	    UpdateWorldMatrix();
-
-	    //create shadows, and draw them to the render buffer and textureIDs[0], not to the screen yet
-        //EraseShadows();
-        //keeps.DrawShadow(globals);
-
-        // Bind the default framebuffer (to render to the screen) - indicated by '0', this has been added because of shadow map FBO
-        //GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 
 		// clear Screen and Depth Buffer, we have set the clear color as black.
         // Set the clear color to black
@@ -320,62 +240,11 @@ public class GLRenderer implements Renderer {
 		LocAngScale catapultPos = new LocAngScale(new Vector3f(0f, 0f, 0f),
                                 new Vector3f(0f, 0f, 0f),
                 new Vector3f(0.2f, 0.2f, 0.2f));
-                                //new Vector3f(1f, 1f, 1f));
-                                //
-		//keep.DrawShadow(globals,catapultPos);
-		//keep.Draw(globals, catapultPos);
 
 		catapult.DrawShadow(globals, catapultPos);
 		catapult.Draw(globals, catapultPos);
 
-
-
-        //draw map/floor
-        //sky.DrawHUDFullScreen(globals, Vector3f.ZERO, Vector3f.ZERO);
-        //sky.Draw(globals, Vector3f.ZERO, Vector3f.ZERO, 1f);
-		//map.Draw(globals);
-
-        //draw shadows
-		//shadowRec.SetTextureIndex(0);//testing shadow map wich is drawn to textureIDs[0]
-		//shadowRec.DrawHUDFullScreen(globals, Vector3f.ZERO, Vector3f.ZERO);
-        //shadowRec.DrawHUD(globals, Vector3f.ZERO, Vector3f.ZERO, globals.scale);
-        //shadowRec.DrawShadow(globals);
-
-		//keeps.DrawShadow(globals);
-
-        //draw full objects
-        //wall.Draw(globals);
-        //keeps.Draw(globals);
-
-        //DrawBackground();//sky
-
-
-
-        //draw map tiles
-        //
-
-        //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);// must do this after bumptext
-
-		//modelRec.Draw(globals.viewProjMatrix, new Vector3f(0f, 0f, -20f), new Vector3f(0f, 0f, 0f), 1f);
-
-
-        //catapult.position.location.z = 0.5f;
-        //catapult.position.scales = new Vector3f(0.2f, 0.2f, 0.2f);
-        //catapult.Draw(globals);
-
-
-		//test.Draw(globals, LocAngScale.ZERO_ONE());
-        //test.DrawShaddow(globals, LocAngScale.ZERO_ONE());
-
-
-        //glText.Draw(globals.orthoMatrix, testText, new PointF(0f, 0f));
-
-        //testText = globals.test.toString();
-        //testText = Integer.toString(FPS);
-        //glText.DrawHUD(globals, testText, new PointF(0f, 0f));
-
-
-
+        glText.DrawHUD(globals, testText, new PointF(0f, 0f));
 
         //collision test
         //dot.Draw(globals, testLoc);
@@ -518,18 +387,6 @@ public class GLRenderer implements Renderer {
 	    /*testText = "";
         testText += (char) event.getUnicodeChar();*/
     }
-
-    /*public void EraseShadows(){
-        // setup to render to frame buffer instead of screen from the sun's point of view, to textureID's[0]
-        // bind the generated framebuffer
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, globals.fb[0]);
-
-        GLES20.glViewport(0, 0, globals.screenWidth, globals.screenHeight);
-
-        // Clear color and buffers
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
-    }*/
 
     // create a frame buffer object, which will render to textureIDs[0] for later use in shadow mapping
     public void GenerateShadowFBO()

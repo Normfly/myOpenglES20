@@ -144,9 +144,9 @@ public class GLText {
             position.x += size;
 
             if (HUD){
-                rectangleModel.DrawHUD(globals, new Vector3f(position.x, position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
+                rectangleModel.DrawHUD(globals, new Vector3f(position.x, -position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
             }else{
-                rectangleModel.Draw(globals, new Vector3f(position.x, position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
+                rectangleModel.Draw(globals, new Vector3f(position.x, -position.y, position.z), new Vector3f(0f, 0f, 0f), 1f);
             }
 
         }
