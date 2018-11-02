@@ -17,15 +17,19 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import static javax.microedition.khronos.opengles.GL10.GL_BLEND;
 import static javax.microedition.khronos.opengles.GL10.GL_REPEAT;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_2D;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_S;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_T;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
+import static org.normware.myopengl2.Constants.BYTES_PER_INT;
+import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
 import static org.normware.myopengl2.Constants.INPUT_BUFFER_SIZE;
 
 public class Model {
@@ -292,17 +296,6 @@ public class Model {
     public void DrawShadow(Globals globals, LocAngScale modelPos){
         if (!shadowed){return;}
 
-            // setup to render to frame buffer instead of screen from the sun's point of view, to textureID's[0]
-            // bind the generated framebuffer
-            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, globals.fb[0]);
-
-            GLES20.glViewport(0, 0, globals.screenWidth, globals.screenHeight);
-
-            // Clear color and buffers
-            GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
-
-
         // render to textureIDs[0]
 
         float[] modelMatrix = new float[16];
@@ -317,7 +310,7 @@ public class Model {
         //move light position to same distance as camera distance from 0,0,0, just spin around 0,0,0 to light source
         Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]);
         float cameraDist = globals.cameraPosition.GetDistance();
-        lightPos.MoveTo(cameraDist * 2);
+        lightPos.MoveTo(cameraDist);
 
         //sun location looking at the center
         Matrix.setLookAtM(sunMatrix, 0, lightPos.x, -lightPos.y,lightPos.z,
@@ -326,7 +319,10 @@ public class Model {
                 //globals.lightPosition[0], -globals.lightPosition[1], globals.lightPosition[2],
 
         //projection matrix plus sun
-        Matrix.perspectiveM(projectionMatrix, 0, 45f, 1f, 0.1f, -100f);
+        //Matrix.perspectiveM(projectionMatrix, 0, 45f, 1f, 0.1f, -100f);
+        Matrix.orthoM(projectionMatrix, 0, -(globals.glScreenSize/2), (globals.glScreenSize/2),
+                (globals.glScreenSize/2), -(globals.glScreenSize/2),
+                -1f, 100f);
         tempMatrix = new float[16];
         Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, sunMatrix, 0);//add camera matrix to perspective
 
@@ -338,10 +334,10 @@ public class Model {
         Matrix.rotateM(modelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
         Matrix.rotateM(modelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
 
-       /* //translate //do not translate, so that shadow is located at 0,0,0
+        //translate //do not translate, so that shadow is located at 0,0,0
         Matrix.translateM(modelMatrix, 0, modelPos.location.x,
                 -modelPos.location.y,
-                modelPos.location.z);//move*/
+                modelPos.location.z);//move
 
         //scale
         Matrix.scaleM(modelMatrix, 0, modelPos.scales.x,
@@ -355,7 +351,7 @@ public class Model {
 
         GLES20.glUseProgram(GraphicTools.sp_SolidColor);//use shader programs
 
-        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+       // GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);
         GLES20.glDisable(GLES20.GL_BLEND);
         GLES20.glDisable(GLES20.GL_CULL_FACE);
@@ -392,7 +388,7 @@ public class Model {
         //GLES20.glDisable(GLES20.GL_BLEND);// disable blending
 
 
-        shadowRec.DrawShadow(globals, modelPos);
+        //shadowRec.DrawShadow(globals, modelPos);
 
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 

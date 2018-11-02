@@ -9,6 +9,8 @@ import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -20,6 +22,7 @@ import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_2D;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_S;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_T;
 import static org.normware.myopengl2.Collisions.GetAngle;
+import static org.normware.myopengl2.Collisions.RotatePointF;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
 import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
 
@@ -332,7 +335,7 @@ public class RectangleModel {
         //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
     }
 
-    public void DrawShadow(Globals globals, LocAngScale modelPos){
+    public void DrawShadow(Globals globals){
 
         // Bind the default framebuffer (to render to the screen) - indicated by '0', this has been added because of shadow map FBO
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
@@ -342,6 +345,7 @@ public class RectangleModel {
 
         //rotate texture
         float lightAngle = GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
+        float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
@@ -351,10 +355,10 @@ public class RectangleModel {
         //translate rotate and scale
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
         //Matrix.translateM(modelMatrix, 0, 0f, 0f, 0f);//move
-        Matrix.translateM(modelMatrix, 0, modelPos.location.x, modelPos.location.y, modelPos.location.z);
+        //Matrix.translateM(modelMatrix, 0, modelPos.location.x, modelPos.location.y, modelPos.location.z);
         //rotate
         Matrix.rotateM(modelMatrix, 0, 0f, 1f, 0f, 0f);
-        Matrix.rotateM(modelMatrix, 0, lightAngle, 0f, 1f, 0f);
+        Matrix.rotateM(modelMatrix, 0, -(lightAngle - cameraAngle), 0f, 1f, 0f);
         Matrix.rotateM(modelMatrix, 0, 0f, 0f, 0f, 1f);
         //scale
         Matrix.scaleM(modelMatrix, 0, scale.x, scale.y, scale.y);//scale
@@ -373,6 +377,11 @@ public class RectangleModel {
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, globals.textureIDs[0]);// 0 = shadow texture ID
+
+        //GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glDisable(GLES20.GL_CULL_FACE);
 
         //GLES20.glEnable(GLES20.GL_CULL_FACE);
         //GLES20.glEnable(GLES20.GL_FRONT);// draw front and back face
@@ -425,7 +434,7 @@ public class RectangleModel {
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTexCoordLoc);
 
-        //GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
     }
 
     // Generate textures, returns next texture index

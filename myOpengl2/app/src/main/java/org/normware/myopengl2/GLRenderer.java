@@ -57,12 +57,10 @@ public class GLRenderer implements Renderer {
 	private Vector3f testLoc = new Vector3f(0f, 0f, 0f);
 
 	//3d models
+    public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false);
     public RectangleModel sky = new RectangleModel(new PointF(1f, 1f), false, false, true);
-    public RectangleModel grass = new RectangleModel(new PointF(10f, 10f), false, true, false);
-    public Model keep = new Model(false, true, 1.0f);
     public Model catapult = new Model(false, true, 1.0f);
-
-    //Keeps keeps = new Keeps(2);
+    public Map map = new Map();
 	GLText glText = new GLText();
 	DrawDot dot = new DrawDot();
 
@@ -150,21 +148,20 @@ public class GLRenderer implements Renderer {
 
         //load textures
 		GLES20.glGenTextures(globals.textureIDs.length, globals.textureIDs, 0);  // Generate texture-ID array
+		//modelRec.LoadTexture(mContext, R.drawable.ic_launcher, texturePntr++);
 
         //if going more than 10, make sure to update textureIDs
 
         texturePntr = 1;//save 0 for shadow
-
+		texturePntr = map.Load(globals, mContext, texturePntr);
         sky.LoadTexture(globals, mContext, R.raw.sky, texturePntr++);
-        grass.LoadTexture(globals, mContext, R.raw.grass, texturePntr++);
 
         glText.LoadFont(globals, mContext, Color.argb(255,255,255,255),
 												Color.argb(0,0,0,0),
-												true, 1f, texturePntr++);
+												true, .5f, texturePntr++);
 
-
-        keep.LoadModel(globals, mContext, "keep", texturePntr++, true);
         catapult.LoadModel(globals, mContext, "Catapult", texturePntr++, true);
+
 	}
 
 	private void SetupShaderPrograms(){
@@ -217,32 +214,42 @@ public class GLRenderer implements Renderer {
 		GLES20.glAttachShader(GraphicTools.sp_Text, fshadert);
 		GLES20.glLinkProgram(GraphicTools.sp_Text);
 
+
 	}
 
 	private void Render() {
 
 	    testText = Integer.toString(FPS) + " FPS";
-	    /*globals.lightPosition[0] = globals.test.x;
+	    globals.lightPosition[0] = globals.test.x;
 	    globals.lightPosition[1] = globals.test.y;
-	    globals.lightPosition[2] = globals.test.z;*/
+	    globals.lightPosition[2] = globals.test.z;
+
+
 
 	    UpdateWorldMatrix();
 
+	    //create shadows, and draw them to the render buffer and textureIDs[0], not to the screen yet
+        EraseShadows();
+        catapult.DrawShadow(globals, LocAngScale.ZERO_ONE());
+
+        // Bind the default framebuffer (to render to the screen) - indicated by '0', this has been added because of shadow map FBO
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+
 		// clear Screen and Depth Buffer, we have set the clear color as black.
         // Set the clear color to black
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1);
+        GLES20.glClearColor(0.0f, 0.5f, 0.0f, 1);
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
 		//draw 3d objects
-		sky.DrawHUDFullScreen(globals, Vector3f.ZERO, Vector3f.ZERO);
-		grass.Draw(globals, new Vector3f(0f, 0f, 0f), Vector3f.ZERO, 1f);
 
-		LocAngScale catapultPos = new LocAngScale(new Vector3f(0f, 0f, 0f),
-                                new Vector3f(0f, 0f, 0f),
-                new Vector3f(0.2f, 0.2f, 0.2f));
+        //draw map/floor
+		map.Draw(globals);
 
-		catapult.DrawShadow(globals, catapultPos);
-		catapult.Draw(globals, catapultPos);
+        //draw shadows
+        shadowRec.DrawShadow(globals);
+
+        //draw full textured objects
+        catapult.Draw(globals, LocAngScale.ZERO_ONE());
 
         glText.DrawHUD(globals, testText, new PointF(0f, 0f));
 
@@ -250,7 +257,6 @@ public class GLRenderer implements Renderer {
         //dot.Draw(globals, testLoc);
         //testText = Integer.toString(wall.CheckHitLocation(testLoc));
 		//testText = Boolean.toString(wall.CheckHit(testLoc));
-
 
 	}
 
@@ -350,17 +356,17 @@ public class GLRenderer implements Renderer {
             case KeyEvent.KEYCODE_S:
                 testLoc.z -= .01f;
                 break;
-            case KeyEvent.KEYCODE_F:
-                globals.test2.y -= 1;
+            case KeyEvent.KEYCODE_Q:
+                testLoc.y -= .01f;
                 break;
-            case KeyEvent.KEYCODE_H:
-                globals.test2.y += 1;
+            case KeyEvent.KEYCODE_E:
+                testLoc.y += .01f;
                 break;
             case KeyEvent.KEYCODE_T:
-                globals.test2.x += 1;
+                z += .1f;
                 break;
             case KeyEvent.KEYCODE_G:
-                globals.test2.x -= 1;
+                z -= .1f;
                 break;
 			case KeyEvent.KEYCODE_1:
 				globals.test.x += 1;
@@ -374,7 +380,6 @@ public class GLRenderer implements Renderer {
 			case KeyEvent.KEYCODE_4:
 				globals.test.y -= 1;
 				break;
-
             /*case KeyEvent.KEYCODE_COMMA:
                 keep.position.angles.y -= .1f;*/
 			case KeyEvent.KEYCODE_P:
@@ -386,6 +391,18 @@ public class GLRenderer implements Renderer {
 	public void ProcessKeyDown(int KeyCode, KeyEvent event){
 	    /*testText = "";
         testText += (char) event.getUnicodeChar();*/
+    }
+
+    public void EraseShadows(){
+        // setup to render to frame buffer instead of screen from the sun's point of view, to textureID's[0]
+        // bind the generated framebuffer
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, globals.fb[0]);
+
+        GLES20.glViewport(0, 0, globals.screenWidth, globals.screenHeight);
+
+        // Clear color and buffers
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
     }
 
     // create a frame buffer object, which will render to textureIDs[0] for later use in shadow mapping

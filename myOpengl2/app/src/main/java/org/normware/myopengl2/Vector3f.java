@@ -235,7 +235,6 @@ public class Vector3f {
     }
 
     public float GetDistance(){
-        float result = (float)Math.sqrt((x * x) + (y * y) + (z * z));
-        return result;
+        return (float)Math.sqrt((x * x) + (y * y) + (z * z));
     }
 }
