@@ -306,8 +306,8 @@ public class Model {
         //move light position to same distance as camera distance from 0,0,0, just spin around 0,0,0 to light source
         Vector3f lightPos = new Vector3f(globals.lightPosition[0], 0, globals.lightPosition[2]);
         float cameraDist = globals.cameraPosition.GetDistance();
-        lightPos.MoveTo(cameraDist);
-        lightPos.y = globals.lightPosition[1];
+        lightPos.MoveTo(22);//22 works with -10,-10,10
+        lightPos.y = globals.cameraPosition.y;//globals.lightPosition[1];
 
         //sun location looking at the center
         Matrix.setLookAtM(sunMatrix, 0, -lightPos.x, (lightPos.y), lightPos.z,
