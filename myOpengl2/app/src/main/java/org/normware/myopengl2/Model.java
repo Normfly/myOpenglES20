@@ -17,19 +17,15 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static javax.microedition.khronos.opengles.GL10.GL_BLEND;
 import static javax.microedition.khronos.opengles.GL10.GL_REPEAT;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_2D;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_S;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_T;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
-import static org.normware.myopengl2.Constants.BYTES_PER_INT;
-import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
 import static org.normware.myopengl2.Constants.INPUT_BUFFER_SIZE;
 
 public class Model {
@@ -308,12 +304,13 @@ public class Model {
         //view from light source point of view
 
         //move light position to same distance as camera distance from 0,0,0, just spin around 0,0,0 to light source
-        Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]);
+        Vector3f lightPos = new Vector3f(globals.lightPosition[0], 0, globals.lightPosition[2]);
         float cameraDist = globals.cameraPosition.GetDistance();
         lightPos.MoveTo(cameraDist);
+        lightPos.y = globals.lightPosition[1];
 
         //sun location looking at the center
-        Matrix.setLookAtM(sunMatrix, 0, lightPos.x, -lightPos.y,lightPos.z,
+        Matrix.setLookAtM(sunMatrix, 0, -lightPos.x, (lightPos.y), lightPos.z,
                                                 0f, 0f, 0f,
                                                 0f, 1f, 0f);
                 //globals.lightPosition[0], -globals.lightPosition[1], globals.lightPosition[2],
@@ -321,10 +318,11 @@ public class Model {
         //projection matrix plus sun
         //Matrix.perspectiveM(projectionMatrix, 0, 45f, 1f, 0.1f, -100f);
         Matrix.orthoM(projectionMatrix, 0, -(globals.glScreenSize/2), (globals.glScreenSize/2),
-                (globals.glScreenSize/2), -(globals.glScreenSize/2),
+                -(globals.glScreenSize/2), (globals.glScreenSize/2),
                 -1f, 100f);
         tempMatrix = new float[16];
         Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, sunMatrix, 0);//add camera matrix to perspective
+        projectionMatrix = tempMatrix.clone();
 
         //translate
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
@@ -344,8 +342,8 @@ public class Model {
                 modelPos.scales.y,
                 modelPos.scales.z);//scale
 
-        //perspective view matrix
-        Matrix.multiplyMM(viewProjMatrix, 0, tempMatrix, 0, modelMatrix, 0);
+
+        Matrix.multiplyMM(viewProjMatrix, 0, projectionMatrix, 0, modelMatrix, 0);
         //Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix
         finalMatrix = viewProjMatrix.clone();//final matrix created
 

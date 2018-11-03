@@ -138,6 +138,8 @@ public class GLRenderer implements Renderer {
 		UpdateWorldMatrix();
 
         GenerateShadowFBO();
+
+		shadowRec.ResizeRectangle(globals.glScreenSize, globals.glScreenSize);
 	}
 
 	@Override

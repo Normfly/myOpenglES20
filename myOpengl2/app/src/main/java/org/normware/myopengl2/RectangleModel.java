@@ -9,8 +9,6 @@ import android.opengl.GLUtils;
 import android.opengl.Matrix;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -34,6 +32,7 @@ public class RectangleModel {
     private FloatBuffer texBuffer;    // Buffer for texture-coords-array
     private FloatBuffer bumpTexBuffer; // Buffer for bump map texture coords array
     private FloatBuffer shadowTexBuffer;
+    private float shadowAngle;
     private ShortBuffer indexBuffer; // Buffer for vertex draw order index array
     private int textureIndex;
     private int bumpMapIndex = -1;
@@ -105,12 +104,7 @@ public class RectangleModel {
 
         this.transparent = transparent;
 
-        // Setup vertex array buffer. Vertices in float. A float has 4 bytes
-        ByteBuffer vbb = ByteBuffer.allocateDirect(vertices.length * BYTES_PER_FLOAT);
-        vbb.order(ByteOrder.nativeOrder()); // Use native byte order
-        vertexBuffer = vbb.asFloatBuffer(); // Convert from byte to float
-        vertexBuffer.put(vertices);         // Copy data into buffer
-        vertexBuffer.position(0);           // Rewind
+        CreateVertexBuffer();
 
         CreateTextureCoordsBuffer();
         CreateShadowTextureCoordsBuffer();
@@ -124,6 +118,15 @@ public class RectangleModel {
 
     }
 
+    private void CreateVertexBuffer(){
+        // Setup vertex array buffer. Vertices in float. A float has 4 bytes
+        ByteBuffer vbb = ByteBuffer.allocateDirect(vertices.length * BYTES_PER_FLOAT);
+        vbb.order(ByteOrder.nativeOrder()); // Use native byte order
+        vertexBuffer = vbb.asFloatBuffer(); // Convert from byte to float
+        vertexBuffer.put(vertices);         // Copy data into buffer
+        vertexBuffer.position(0);           // Rewind
+    }
+
     public void SetTextureIndex(int newIndex){textureIndex = newIndex;}
 
     public FloatBuffer GetVertexBuffer(){return vertexBuffer;}
@@ -132,6 +135,15 @@ public class RectangleModel {
     public void UpdateTextureCoords(float[] texCoords){
         this.texCoords = texCoords;
         CreateTextureCoordsBuffer();
+    }
+
+    public void ResizeRectangle(float width, float height){
+        vertices = new float[]{
+                -width/2, 0f, height/2,//bottom left
+                -width/2, 0f, -height/2,//top left
+                width/2, 0f, -height/2,//top right
+                width/2, 0f, height/2};//bottom right
+        CreateVertexBuffer();
     }
 
     private void CreateTextureCoordsBuffer(){
@@ -335,17 +347,22 @@ public class RectangleModel {
         //GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
     }
 
+    private float Tweak(float angle){
+        float result = Math.abs(angle - 90);
+        return result / 90;
+    }
+
     public void DrawShadow(Globals globals){
 
         // Bind the default framebuffer (to render to the screen) - indicated by '0', this has been added because of shadow map FBO
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 
-        //PointF scale = new PointF(globals.glScreenSize, globals.glScreenSize);
-        PointF scale = new PointF(globals.glScreenSize, globals.glScreenSize);
-
         //rotate texture
-        float lightAngle = GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
+        float lightAngle = -GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
         float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
+        float diffAngle = (cameraAngle - lightAngle);
+
+        PointF scale = new PointF(1f, 3 - globals.aspectRatio);//2.4f);
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
@@ -354,21 +371,17 @@ public class RectangleModel {
 
         //translate rotate and scale
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
-        //Matrix.translateM(modelMatrix, 0, 0f, 0f, 0f);//move
-        //Matrix.translateM(modelMatrix, 0, modelPos.location.x, modelPos.location.y, modelPos.location.z);
         //rotate
-        Matrix.rotateM(modelMatrix, 0, 0f, 1f, 0f, 0f);
-        Matrix.rotateM(modelMatrix, 0, -(lightAngle - cameraAngle), 0f, 1f, 0f);
-        Matrix.rotateM(modelMatrix, 0, 0f, 0f, 0f, 1f);
+        //Matrix.rotateM(modelMatrix, 0, 0f, 1f, 0f, 0f);
+        Matrix.rotateM(modelMatrix, 0, diffAngle , 0f, 1f, 0f);
+        //Matrix.rotateM(modelMatrix, 0, 0f, 0f, 0f, 1f);
         //scale
         Matrix.scaleM(modelMatrix, 0, scale.x, scale.y, scale.y);//scale
-
-        //GLES20.glDisable(GLES20.GL_DEPTH_TEST);
-        //GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 
         Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//projection matrix
 
         finalMatrix = projectionMatrix.clone();//final matrix created
+
 
         GLES20.glEnable(GLES20.GL_TEXTURE_2D);  // Enable texture
         //texture filtering
@@ -424,7 +437,7 @@ public class RectangleModel {
         // Prepare the texturecoordinates
         GLES20.glVertexAttribPointer ( mTexCoordLoc, 2, GLES20.GL_FLOAT,
                 false,
-                0, shadowTexBuffer);
+                0, texBuffer);
 
         // Draw the triangle
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, indices.length,
@@ -451,6 +464,32 @@ public class RectangleModel {
 
     public int LoadTexture(Globals globals, Context context, int iD, int textureIndex){//load without bump map
         return LoadTexture(globals, context, iD, textureIndex, 0);
+    }
+
+    public void RotateTexture(float angle){
+        PointF xy0 = RotatePointF(new PointF(0.5f, 0.5f),
+                                new PointF(texCoords[0], texCoords[1]),
+                                angle);
+        PointF xy1 = RotatePointF(new PointF(0.5f, 0.5f),
+                new PointF(texCoords[2], texCoords[3]),
+                angle);
+        PointF xy2 = RotatePointF(new PointF(0.5f, 0.5f),
+                new PointF(texCoords[4], texCoords[5]),
+                angle);
+        PointF xy3 = RotatePointF(new PointF(0.5f, 0.5f),
+                new PointF(texCoords[6], texCoords[7]),
+                angle);
+
+        texCoords[0] = xy0.x;
+        texCoords[1] = xy0.y;
+        texCoords[2] = xy1.x;
+        texCoords[3] = xy1.y;
+        texCoords[4] = xy2.x;
+        texCoords[5] = xy2.y;
+        texCoords[6] = xy3.x;
+        texCoords[7] = xy3.y;
+
+        UpdateTextureCoords(texCoords);
     }
 
     public int LoadTexture(Globals globals, Context context, int imageiD, int textureIndex, int bumpMapiD){//load with bump map
