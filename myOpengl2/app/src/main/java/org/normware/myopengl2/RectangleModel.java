@@ -210,6 +210,12 @@ public class RectangleModel {
         Draw(globals, position, angles, new PointF(scale, scale), HUD);
     }
 
+    public void Draw(Globals globals, Vector3f position, Vector3f angles, float scale, float[] bumpTexCoords){
+        this.bumpTexCoords = bumpTexCoords;
+        CreateBumpTexCoordsBuffer();
+        Draw(globals, position, angles, 1.0f);
+    }
+
     private void Draw(Globals globals, Vector3f position, Vector3f angles, PointF scale, boolean HUD) {
 
         // Matrix transformations
@@ -360,9 +366,9 @@ public class RectangleModel {
         //rotate texture
         float lightAngle = -GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
         float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
-        float diffAngle = (cameraAngle - lightAngle);
+        float diffAngle = -lightAngle;//cameraAngle - lightAngle;
 
-        PointF scale = new PointF(1f, 3 - globals.aspectRatio);//2.4f);
+        PointF scale = new PointF(1f, 1.4f + globals.test.y);//1.4 camera -45//3 - globals.aspectRatio);//2.4f);
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
@@ -463,7 +469,7 @@ public class RectangleModel {
 
 
     public int LoadTexture(Globals globals, Context context, int iD, int textureIndex){//load without bump map
-        return LoadTexture(globals, context, iD, textureIndex, 0);
+        return LoadTexture(globals, context, iD, textureIndex, 0, 0);
     }
 
     public void RotateTexture(float angle){
@@ -492,7 +498,7 @@ public class RectangleModel {
         UpdateTextureCoords(texCoords);
     }
 
-    public int LoadTexture(Globals globals, Context context, int imageiD, int textureIndex, int bumpMapiD){//load with bump map
+    public int LoadTexture(Globals globals, Context context, int imageiD, int textureIndex, int bumpMapiD, int randomBumpMapSeed){//load with bump map
         int nextTextureIndex = textureIndex;
 
         try{
@@ -512,6 +518,7 @@ public class RectangleModel {
             if (bumpMapiD > 0){
 
                 CreateBumpTexCoordsBuffer();
+                RandomizeBumpTex(randomBumpMapSeed);
 
                 // load bump map image and bind it to a texture
                 nextTextureIndex += 1;
@@ -561,7 +568,7 @@ public class RectangleModel {
         bitmap.recycle();
     }
 
-    public void RandomizeBumpTex(int seed){
+    public float[] RandomizeBumpTex(int seed){
         // randomize bump map to blend tiles together
         Random r = new Random();
         int n = (r.nextInt(seed)) - (seed/2);
@@ -583,6 +590,7 @@ public class RectangleModel {
 
         CreateBumpTexCoordsBuffer();
 
+        return bumpTexCoords;
     }
 
     private void CreateBumpTexCoordsBuffer(){

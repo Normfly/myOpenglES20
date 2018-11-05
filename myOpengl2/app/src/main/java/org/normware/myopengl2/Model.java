@@ -304,10 +304,10 @@ public class Model {
         //view from light source point of view
 
         //move light position to same distance as camera distance from 0,0,0, just spin around 0,0,0 to light source
-        Vector3f lightPos = new Vector3f(globals.lightPosition[0], 0, globals.lightPosition[2]);
-        float cameraDist = globals.cameraPosition.GetDistance();
-        lightPos.MoveTo(22);//22 works with -10,-10,10
-        lightPos.y = globals.cameraPosition.y;//globals.lightPosition[1];
+        Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]);
+        float cameraDist = new Vector3f(globals.cameraPosition.x, globals.cameraPosition.y, globals.cameraPosition.z).GetDistance();//globals.cameraPosition.GetDistance();
+        lightPos.MoveTo(cameraDist);
+        //lightPos.y = globals.lightPosition[1];
 
         //sun location looking at the center
         Matrix.setLookAtM(sunMatrix, 0, -lightPos.x, (lightPos.y), lightPos.z,
@@ -327,15 +327,17 @@ public class Model {
         //translate
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
 
+        //translate //do not translate, so that shadow is located at 0,0,0
+        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
+                -modelPos.location.y,
+                modelPos.location.z);//move
+
         //rotate
         Matrix.rotateM(modelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
         Matrix.rotateM(modelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
         Matrix.rotateM(modelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
 
-        //translate //do not translate, so that shadow is located at 0,0,0
-        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
-                -modelPos.location.y,
-                modelPos.location.z);//move
+
 
         //scale
         Matrix.scaleM(modelMatrix, 0, modelPos.scales.x,
@@ -407,15 +409,17 @@ public class Model {
         //translate scale and rotate
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
 
+        //translate
+        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
+                -modelPos.location.y,
+                modelPos.location.z);//move
+
+
         //rotate
         Matrix.rotateM(modelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
         Matrix.rotateM(modelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
         Matrix.rotateM(modelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
 
-        //translate
-        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
-                -modelPos.location.y,
-                modelPos.location.z);//move
 
 
         //scale
