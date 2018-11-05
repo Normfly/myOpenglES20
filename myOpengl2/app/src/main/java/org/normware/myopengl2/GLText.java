@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PointF;
-import android.opengl.Matrix;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
@@ -112,7 +111,8 @@ public class GLText {
     public void DrawHUD(Globals globals, String text, PointF location){
         //float[] HUDmatrix = new float[16];
         //Matrix.orthoM(HUDmatrix, 0, 0f, globals.glScreenWidth, 0f, globals.glScreenHeight, 0.1f, -100f);//GetMatrix();
-        Draw(globals, text, new Vector3f(location.x - size, globals.glScreenHeight - location.y - size, 0), true);
+        //Draw(globals, text, new Vector3f(location.x - size, globals.glScreenHeight - location.y - size, 0), true);
+        Draw(globals, text, new Vector3f(location.x - size, -(globals.glScreenHeight - (location.y + size)), 0), true);
     }
 
     public void Draw(Globals globals, String text, PointF position, boolean HUD){
