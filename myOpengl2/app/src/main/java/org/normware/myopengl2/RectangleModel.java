@@ -368,7 +368,7 @@ public class RectangleModel {
         float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
         float diffAngle = -lightAngle;//cameraAngle - lightAngle;
 
-        PointF scale = new PointF(1f, 1.4f + globals.test.y);//1.4 camera -45//3 - globals.aspectRatio);//2.4f);
+        PointF scale = new PointF(1f, 2f - globals.aspectRatio);
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
