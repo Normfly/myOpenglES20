@@ -19,7 +19,6 @@ import static javax.microedition.khronos.opengles.GL10.GL_REPEAT;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_2D;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_S;
 import static javax.microedition.khronos.opengles.GL10.GL_TEXTURE_WRAP_T;
-import static org.normware.myopengl2.Collisions.GetAngle;
 import static org.normware.myopengl2.Collisions.RotatePointF;
 import static org.normware.myopengl2.Constants.BYTES_PER_FLOAT;
 import static org.normware.myopengl2.Constants.BYTES_PER_SHORT;
@@ -364,30 +363,25 @@ public class RectangleModel {
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 
         //rotate texture
-        float lightAngle = -GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
-        float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
-        float diffAngle = -lightAngle;//cameraAngle - lightAngle;
+        //float lightAngle = GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
+        //float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
+        //float diffAngle = lightAngle;//cameraAngle - lightAngle;
 
-        PointF scale = new PointF(1f, 2f - globals.aspectRatio);
+        PointF scale = new PointF(1f, 2f - globals.aspectRatio);//1.4f + globals.test.y);//1.4 camera -45//3 - globals.aspectRatio);//2.4f);
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
-        float[] finalMatrix;
-        float[] projectionMatrix = new float[16];
+        float[] finalMatrix = new float[16];
 
         //translate rotate and scale
-        Matrix.setIdentityM(modelMatrix, 0);//set to 0
-        //rotate
-        //Matrix.rotateM(modelMatrix, 0, 0f, 1f, 0f, 0f);
-        Matrix.rotateM(modelMatrix, 0, diffAngle , 0f, 1f, 0f);
-        //Matrix.rotateM(modelMatrix, 0, 0f, 0f, 0f, 1f);
+        Matrix.setLookAtM(modelMatrix, 0, 0f, 0f, 0f,
+                                                globals.lightPosition[0], 0f, -globals.lightPosition[2],
+                                            0f, 1f, 0f);
+
         //scale
         Matrix.scaleM(modelMatrix, 0, scale.x, scale.y, scale.y);//scale
 
-        Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//projection matrix
-
-        finalMatrix = projectionMatrix.clone();//final matrix created
-
+        Matrix.multiplyMM(finalMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//projection matrix
 
         GLES20.glEnable(GLES20.GL_TEXTURE_2D);  // Enable texture
         //texture filtering

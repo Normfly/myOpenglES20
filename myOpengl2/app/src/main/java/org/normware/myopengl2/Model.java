@@ -294,60 +294,41 @@ public class Model {
 
         // render to textureIDs[0]
 
-        float[] modelMatrix = new float[16];
+        float[] sunModelMatrix = new float[16];
         float[] projectionMatrix = new float[16];
         float[] finalMatrix = new float[16];
-        float[] sunMatrix = new float[16];
-        float[] tempMatrix = new float[16];
-        float[] viewProjMatrix = new float[16];
 
         //view from light source point of view
 
         //move light position to same distance as camera distance from 0,0,0, just spin around 0,0,0 to light source
-        Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]);
-        float cameraDist = new Vector3f(globals.cameraPosition.x, globals.cameraPosition.y, globals.cameraPosition.z).GetDistance();//globals.cameraPosition.GetDistance();
-        lightPos.MoveTo(cameraDist);
-        //lightPos.y = globals.lightPosition[1];
+        Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]).GetNormal();
+        lightPos.y = -0.9f;//keeps shadows from being skewed.
 
-        //sun location looking at the center
-        Matrix.setLookAtM(sunMatrix, 0, -lightPos.x, (lightPos.y), lightPos.z,
-                                                0f, 0f, 0f,
-                                                0f, 1f, 0f);
-                //globals.lightPosition[0], -globals.lightPosition[1], globals.lightPosition[2],
+        Matrix.setLookAtM(sunModelMatrix, 0, -lightPos.x, lightPos.y, lightPos.z,
+                0, 0, 0,
+                0f, 1f, 0f);
 
-        //projection matrix plus sun
-        //Matrix.perspectiveM(projectionMatrix, 0, 45f, 1f, 0.1f, -100f);
-        Matrix.orthoM(projectionMatrix, 0, -(globals.glScreenSize/2), (globals.glScreenSize/2),
-                -(globals.glScreenSize/2), (globals.glScreenSize/2),
-                -1f, 100f);
-        tempMatrix = new float[16];
-        Matrix.multiplyMM(tempMatrix, 0, projectionMatrix, 0, sunMatrix, 0);//add camera matrix to perspective
-        projectionMatrix = tempMatrix.clone();
-
-        //translate
-        Matrix.setIdentityM(modelMatrix, 0);//set to 0
-
-        //translate //do not translate, so that shadow is located at 0,0,0
-        Matrix.translateM(modelMatrix, 0, modelPos.location.x,
-                -modelPos.location.y,
+        //move
+        Matrix.translateM(sunModelMatrix, 0, modelPos.location.x,
+                -(modelPos.location.y),
                 modelPos.location.z);//move
-
         //rotate
-        Matrix.rotateM(modelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
-        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
-        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
-
-
-
+        Matrix.rotateM(sunModelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
+        Matrix.rotateM(sunModelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
+        Matrix.rotateM(sunModelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
         //scale
-        Matrix.scaleM(modelMatrix, 0, modelPos.scales.x,
+        Matrix.scaleM(sunModelMatrix, 0, modelPos.scales.x,
                 modelPos.scales.y,
                 modelPos.scales.z);//scale
 
+        //projection matrix plus sun
+        float width = (globals.glScreenSize/2);
+        float height = (globals.glScreenSize/2);
+        Matrix.orthoM(projectionMatrix, 0, -width, width,
+                -height, height,
+                -1f, 100f);
 
-        Matrix.multiplyMM(viewProjMatrix, 0, projectionMatrix, 0, modelMatrix, 0);
-        //Matrix.multiplyMM(projectionMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//perspective/model/view projection matrix
-        finalMatrix = viewProjMatrix.clone();//final matrix created
+        Matrix.multiplyMM(finalMatrix, 0, projectionMatrix, 0, sunModelMatrix, 0);//add camera matrix to perspective
 
         GLES20.glUseProgram(GraphicTools.sp_SolidColor);//use shader programs
 

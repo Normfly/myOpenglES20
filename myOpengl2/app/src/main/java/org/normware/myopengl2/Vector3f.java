@@ -3,7 +3,6 @@ package org.normware.myopengl2;
 import android.graphics.PointF;
 
 import static org.normware.myopengl2.Collisions.GetAngle;
-import static org.normware.myopengl2.Collisions.GetXYfromRadian;
 
 public class Vector3f {
     public final static Vector3f ZERO = new Vector3f(0f, 0f, 0f);
@@ -237,4 +236,23 @@ public class Vector3f {
     public float GetDistance(){
         return (float)Math.sqrt((x * x) + (y * y) + (z * z));
     }
+
+    public float GetAverage(){
+        return (Math.abs(x) + Math.abs(y) + Math.abs(z)) / 3;
+    }
+
+    public final Vector3f GetNormal(){
+        Vector3f result = new Vector3f(x, y, z);
+        result.MoveTo(1f);
+        return result;
+    }
+
+    public final void Normalize(){
+        Vector3f result = new Vector3f(x, y, z);
+        result.MoveTo(1f);
+        x = result.x;
+        y = result.y;
+        z = result.z;
+    }
+
 }
