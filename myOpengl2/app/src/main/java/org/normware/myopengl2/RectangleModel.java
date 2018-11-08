@@ -367,7 +367,9 @@ public class RectangleModel {
         //float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
         //float diffAngle = lightAngle;//cameraAngle - lightAngle;
 
-        PointF scale = new PointF(1f, 2f - globals.aspectRatio);//1.4f + globals.test.y);//1.4 camera -45//3 - globals.aspectRatio);//2.4f);
+        PointF scale = new PointF(1f, 1f);//2f - globals.aspectRatio);//1.4f + globals.test.y);//1.4 camera -45//3 - globals.aspectRatio);//2.4f);
+        //scale.x *= .5f;
+        //scale.y *= .5f;
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
@@ -448,6 +450,61 @@ public class RectangleModel {
         GLES20.glDisableVertexAttribArray(mTexCoordLoc);
 
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+    }
+
+    public void DrawButton(Globals globals, PointF location, float[] color){
+
+        // Matrix transformations
+        float[] modelMatrix = new float[16];
+        float[] finalMatrix;
+        float[] projectionMatrix = new float[16];
+
+        //translate rotate and scale
+        Matrix.setIdentityM(modelMatrix, 0);//set to 0
+        Matrix.translateM(modelMatrix, 0, location.x, globals.glScreenHeight - (location.y + (size.y/2)), 0f);//move
+
+        //choose ortho or perspective view matrix
+        Matrix.multiplyMM(projectionMatrix, 0, globals.HUDMatrix, 0, modelMatrix, 0);//projection matrix
+
+        finalMatrix = projectionMatrix.clone();//final matrix created
+
+        GLES20.glUseProgram(GraphicTools.sp_SolidColor);//use shader programs
+
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        GLES20.glEnable(GLES20.GL_BLEND);       // Turn blending on
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);// transparency and lighting
+        GLES20.glDisable(GLES20.GL_CULL_FACE);
+
+        // Get handle to color
+        int colorHandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_Color");
+        // pass color info to shader program
+        GLES20.glUniform4fv(colorHandle, 1, color, 0);
+
+        // Get handle to shape's transformation matrix
+        int mtrxhandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_MVPMatrix");
+
+        // Apply the projection and view transformation
+        GLES20.glUniformMatrix4fv(mtrxhandle, 1, false, finalMatrix, 0);
+
+        // get handle to vertex shader's vPosition member
+        int mPositionHandle = GLES20.glGetAttribLocation(GraphicTools.sp_SolidColor, "a_Position");
+
+        // Enable generic vertex attribute array
+        GLES20.glEnableVertexAttribArray(mPositionHandle);
+
+        // Prepare the triangle coordinate data
+        GLES20.glVertexAttribPointer(mPositionHandle, 3,
+                GLES20.GL_FLOAT, false,
+                0, vertexBuffer);
+
+        // Draw the triangle
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, indices.length,
+                GLES20.GL_UNSIGNED_SHORT, indexBuffer);
+
+        // Disable vertex array
+        GLES20.glDisableVertexAttribArray(mPositionHandle);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+
     }
 
     // Generate textures, returns next texture index

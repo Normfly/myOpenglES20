@@ -300,30 +300,29 @@ public class Model {
 
         //view from light source point of view
 
-        //move light position to same distance as camera distance from 0,0,0, just spin around 0,0,0 to light source
+        //changle light position to a normalized position
         Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]).GetNormal();
-        lightPos.y = -0.9f;//keeps shadows from being skewed.
+        if (lightPos.y == 0){lightPos.y = 0.01f;}//light position y cannot be zero
+        //view model from lights point of view and translate model's position
+        Matrix.setLookAtM(sunModelMatrix, 0, -(lightPos.x + modelPos.location.x),
+                                                lightPos.y + modelPos.location.y,
+                                                lightPos.z + modelPos.location.z,
+                                                    -modelPos.location.x, modelPos.location.y, modelPos.location.z,
+                                                0f, 1f, 0f);
 
-        Matrix.setLookAtM(sunModelMatrix, 0, -lightPos.x, lightPos.y, lightPos.z,
-                0, 0, 0,
-                0f, 1f, 0f);
-
-        //move
-        Matrix.translateM(sunModelMatrix, 0, modelPos.location.x,
-                -(modelPos.location.y),
-                modelPos.location.z);//move
-        //rotate
+        //rotate model
         Matrix.rotateM(sunModelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
         Matrix.rotateM(sunModelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
         Matrix.rotateM(sunModelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
-        //scale
+
+        //scale model
         Matrix.scaleM(sunModelMatrix, 0, modelPos.scales.x,
                 modelPos.scales.y,
                 modelPos.scales.z);//scale
 
-        //projection matrix plus sun
+        //projection ortho matrix, glScreensize, height adjusted for how high the sun angle is
         float width = (globals.glScreenSize/2);
-        float height = (globals.glScreenSize/2);
+        float height = (globals.glScreenSize/2) * Math.abs(lightPos.y);
         Matrix.orthoM(projectionMatrix, 0, -width, width,
                 -height, height,
                 -1f, 100f);
@@ -364,12 +363,6 @@ public class Model {
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
-
-        //GLES20.glDisable(GLES20.GL_CULL_FACE);
-        //GLES20.glDisable(GLES20.GL_BLEND);// disable blending
-
-
-        //shadowRec.DrawShadow(globals, modelPos);
 
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 
@@ -445,9 +438,6 @@ public class Model {
         // opacity
         int aAlpha = GLES20.glGetUniformLocation(GraphicTools.sp_ImageLighting, "u_alpha");
         GLES20.glUniform1f(aAlpha, alpha);
-        //int aAlpha = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_alpha");
-        //GLES20.glEnableVertexAttribArray(aAlpha);
-        //GLES20.glVertexAttrib1f(aAlpha, alpha);
 
         // directional lighting direction, 4th is brightness
         int aColor = GLES20.glGetAttribLocation(GraphicTools.sp_ImageLighting, "a_Color");
@@ -458,10 +448,6 @@ public class Model {
             ambientLight[3] = 1.0f;// not lighted, set ambient lighting full brightness
         }
         GLES20.glVertexAttrib4fv(aColor, ambientLight, 0);
-
-        //light direction
-        //int uLightDir = GLES20.glGetUniformLocation(GraphicTools.sp_ImageLighting, "u_LightDir");
-        //GLES20.glUniform3fv(uLightDir, 1, globals.lightDirection, 0);
 
         //light position
         int uLightPos = GLES20.glGetUniformLocation(GraphicTools.sp_ImageLighting, "u_LightPos");

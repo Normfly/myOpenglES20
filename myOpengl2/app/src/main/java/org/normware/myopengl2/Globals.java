@@ -15,7 +15,7 @@ public class Globals extends Application {
     public float revAspectRatio;
     float scale = 1.0f;
 
-    Vector3f test = new Vector3f(-7f, 0f, 7f);//-10,-6.7,10/ 0,-5,10 / -7,-7,7 / -10,-5,0
+    Vector3f test = new Vector3f(-7f, -10f, 7f);//-10,-6.7,10/ 0,-5,10 / -7,-7,7 / -10,-5,0
 
     public int[] textureIDs = new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; //texture image ID's
     int[] fb = new int[1];//frame buffer
