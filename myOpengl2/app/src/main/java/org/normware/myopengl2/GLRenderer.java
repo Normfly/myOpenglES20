@@ -57,8 +57,8 @@ public class GLRenderer implements Renderer {
 	private Vector3f testLoc = new Vector3f(0f, 0f, 0f);
 
 	//3d models
-    public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false);
-    public RectangleModel sky = new RectangleModel(new PointF(1f, 1f), false, false, true);
+    public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false, false);
+    public RectangleModel sky = new RectangleModel(new PointF(1f, 1f), false, false, true, false);
     public Model catapult = new Model(false, true, 1.0f);
     public Map map = new Map();
 	GLText glText = new GLText();

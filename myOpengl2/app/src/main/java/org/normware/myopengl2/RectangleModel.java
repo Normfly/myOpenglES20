@@ -31,13 +31,13 @@ public class RectangleModel {
     private FloatBuffer texBuffer;    // Buffer for texture-coords-array
     private FloatBuffer bumpTexBuffer; // Buffer for bump map texture coords array
     private FloatBuffer shadowTexBuffer;
+    private FloatBuffer edgeVertexBuffer;// Buffer for the edge lies to make a button 3D looking
     private float shadowAngle;
     private ShortBuffer indexBuffer; // Buffer for vertex draw order index array
     private int textureIndex;
     private int bumpMapIndex = -1;
     public boolean transparent = true;
     public PointF size;
-
     private float[] vertices;
 
     // The order of vertexrendering for a quad
@@ -64,7 +64,9 @@ public class RectangleModel {
             1.0f, 0.0f   // D. right-bottom
     };
 
-    public RectangleModel(PointF size, boolean transparent, boolean centered, boolean vertical) {
+    float[] edgeCoords;//edge lines for 3D looking buttons
+
+    public RectangleModel(PointF size, boolean transparent, boolean centered, boolean vertical, boolean button) {
         this.size = size;
         if (vertical){
             // centered vertices
@@ -98,8 +100,26 @@ public class RectangleModel {
                         size.x, 0f, size.y};  // 3 bottom right
 
             }
+
+
         }
 
+        // create line points for 3D button (box)
+        if (button){
+            float[] linePoints = new float[]{vertices[0], vertices[1], vertices[2],//top left
+                                            vertices[3], vertices[4], vertices[5],//bottom left
+                                            vertices[3], vertices[4], vertices[5],
+                                            vertices[6], vertices[7], vertices[8],//bottom right
+                                            vertices[6], vertices[7], vertices[8],
+                                            vertices[9], vertices[10], vertices[11],//top right//
+                                            vertices[9], vertices[10], vertices[11],
+                                            vertices[0], vertices[1], vertices[2]};//top left
+            ByteBuffer vbb = ByteBuffer.allocateDirect(linePoints.length * BYTES_PER_FLOAT);
+            vbb.order(ByteOrder.nativeOrder()); // Use native byte order
+            edgeVertexBuffer = vbb.asFloatBuffer(); // Convert from byte to float
+            edgeVertexBuffer.put(linePoints);         // Copy data into buffer
+            edgeVertexBuffer.position(0);           // Rewind
+        }
 
         this.transparent = transparent;
 
@@ -202,7 +222,8 @@ public class RectangleModel {
     }
 
     public void DrawHUDFullScreen(Globals globals, Vector3f position, Vector3f angles){
-        Draw(globals, position, angles, new PointF(globals.glScreenWidth, globals.glScreenHeight), true);
+        position.y = globals.screenHeight - position.y;
+        Draw(globals, position, angles, new PointF(globals.screenWidth, globals.screenHeight), true);
     }
 
     private void Draw(Globals globals, Vector3f position, Vector3f angles, float scale, boolean HUD) {
@@ -303,7 +324,6 @@ public class RectangleModel {
         // transparency stuff
         if (transparent){
             GLES20.glEnable(GLES20.GL_BLEND);       // Turn blending on
-            //gl.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);// transparency and lighting
         }
 
@@ -367,21 +387,14 @@ public class RectangleModel {
         //float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
         //float diffAngle = lightAngle;//cameraAngle - lightAngle;
 
-        PointF scale = new PointF(1f, 1f);//2f - globals.aspectRatio);//1.4f + globals.test.y);//1.4 camera -45//3 - globals.aspectRatio);//2.4f);
-        //scale.x *= .5f;
-        //scale.y *= .5f;
-
         // Matrix transformations
         float[] modelMatrix = new float[16];
         float[] finalMatrix = new float[16];
 
-        //translate rotate and scale
+        //rotate and scale
         Matrix.setLookAtM(modelMatrix, 0, 0f, 0f, 0f,
-                                                globals.lightPosition[0], 0f, -globals.lightPosition[2],
-                                            0f, 1f, 0f);
-
-        //scale
-        Matrix.scaleM(modelMatrix, 0, scale.x, scale.y, scale.y);//scale
+                globals.lightPosition[0], 0, -globals.lightPosition[2],
+                0f, 1f, 0f);
 
         Matrix.multiplyMM(finalMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//projection matrix
 
@@ -452,7 +465,9 @@ public class RectangleModel {
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
     }
 
-    public void DrawButton(Globals globals, PointF location, float[] color){
+    public void DrawButton(Globals globals, PointF location, float[] color, boolean clicked){
+
+        if (edgeVertexBuffer == null){return;}
 
         // Matrix transformations
         float[] modelMatrix = new float[16];
@@ -461,7 +476,7 @@ public class RectangleModel {
 
         //translate rotate and scale
         Matrix.setIdentityM(modelMatrix, 0);//set to 0
-        Matrix.translateM(modelMatrix, 0, location.x, globals.glScreenHeight - (location.y + (size.y/2)), 0f);//move
+        Matrix.translateM(modelMatrix, 0, location.x, globals.screenHeight - (location.y + (size.y)), 0f);//move
 
         //choose ortho or perspective view matrix
         Matrix.multiplyMM(projectionMatrix, 0, globals.HUDMatrix, 0, modelMatrix, 0);//projection matrix
@@ -500,6 +515,81 @@ public class RectangleModel {
         // Draw the triangle
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, indices.length,
                 GLES20.GL_UNSIGNED_SHORT, indexBuffer);
+
+        // Disable vertex array
+        GLES20.glDisableVertexAttribArray(mPositionHandle);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+
+        DrawLines(globals, location, color, clicked);//draw lines around box to make 3d looking
+
+    }
+
+    private float[] Brighten(float[] color, int amount){
+        float[] result = new float[]{color[0]+amount,
+                                    color[1]+amount,
+                                    color[2]+amount,
+                                    color[3]};
+        for (int i = 0; i < 3; i++){
+            if (result[i] > 255){result[i] = 255;}
+            if (result[i] < 0){result[i] = 0;}
+        }
+        return result;
+    }
+
+    private void DrawLines(Globals globals, PointF location, float[] color, boolean clicked){
+
+        if (clicked){
+            color = Brighten(color,10);
+        }else{
+            color = Brighten(color,-10);
+        }
+
+        // Matrix transformations
+        float[] modelMatrix = new float[16];
+        float[] finalMatrix;
+        float[] projectionMatrix = new float[16];
+
+        //translate rotate and scale
+        Matrix.setIdentityM(modelMatrix, 0);//set to 0
+        Matrix.translateM(modelMatrix, 0, location.x, globals.screenHeight - (location.y + (size.y)), 0f);//move
+
+        //choose ortho or perspective view matrix
+        Matrix.multiplyMM(projectionMatrix, 0, globals.HUDMatrix, 0, modelMatrix, 0);//projection matrix
+
+        finalMatrix = projectionMatrix.clone();//final matrix created
+
+        GLES20.glUseProgram(GraphicTools.sp_SolidColor);//use shader programs
+
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        GLES20.glEnable(GLES20.GL_BLEND);       // Turn blending on
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);// transparency and lighting
+        GLES20.glDisable(GLES20.GL_CULL_FACE);
+
+        // Get handle to color
+        int colorHandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_Color");
+        // pass color info to shader program
+        GLES20.glUniform4fv(colorHandle, 1, color, 0);
+
+        // Get handle to shape's transformation matrix
+        int mtrxhandle = GLES20.glGetUniformLocation(GraphicTools.sp_SolidColor, "u_MVPMatrix");
+
+        // Apply the projection and view transformation
+        GLES20.glUniformMatrix4fv(mtrxhandle, 1, false, finalMatrix, 0);
+
+        // get handle to vertex shader's vPosition member
+        int mPositionHandle = GLES20.glGetAttribLocation(GraphicTools.sp_SolidColor, "a_Position");
+
+        // Enable generic vertex attribute array
+        GLES20.glEnableVertexAttribArray(mPositionHandle);
+
+        // Prepare the lines coordinate data
+        GLES20.glVertexAttribPointer(mPositionHandle, 3,
+                GLES20.GL_FLOAT, false,
+                0, edgeVertexBuffer);
+
+        // Draw the lines
+        GLES20.glLineWidth(50);
+        GLES20.glDrawArrays(GLES20.GL_LINES, 0, 8);//draw lines
 
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);

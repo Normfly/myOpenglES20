@@ -31,7 +31,7 @@ import static org.normware.myopengl2.Constants.INPUT_BUFFER_SIZE;
 public class Model {
     // blender OBJ export y up, write normals, include UVs, write materials, triangulate faces (extrude faces, then remove 0,0 vt's)
 
-    public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false);
+    public RectangleModel shadowRec = new RectangleModel(new PointF(1f, 1f), true, true, false, false);
     private FloatBuffer vertexBuffer;  // Buffer for vertex-array
     private FloatBuffer normalBuffer; // Buffer for normals array
     private FloatBuffer texBuffer; // Buffer for textures
@@ -302,18 +302,19 @@ public class Model {
 
         //changle light position to a normalized position
         Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]).GetNormal();
-        if (lightPos.y == 0){lightPos.y = 0.01f;}//light position y cannot be zero
-        //view model from lights point of view and translate model's position
-        Matrix.setLookAtM(sunModelMatrix, 0, -(lightPos.x + modelPos.location.x),
-                                                lightPos.y + modelPos.location.y,
-                                                lightPos.z + modelPos.location.z,
-                                                    -modelPos.location.x, modelPos.location.y, modelPos.location.z,
-                                                0f, 1f, 0f);
+
+        //view model from lights point of view
+        Matrix.setLookAtM(sunModelMatrix, 0, lightPos.x, -lightPos.y, lightPos.z,
+                0,0,0,
+                0f, 1f, 0f);
+
+        //move model
+        Matrix.translateM(sunModelMatrix, 0, modelPos.location.x, modelPos.location.y, modelPos.location.z);
 
         //rotate model
         Matrix.rotateM(sunModelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
-        Matrix.rotateM(sunModelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
-        Matrix.rotateM(sunModelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
+        Matrix.rotateM(sunModelMatrix, 0, modelPos.angles.y, 0f, 1f, 0f);
+        Matrix.rotateM(sunModelMatrix, 0, modelPos.angles.z, 0f, 0f, 1f);
 
         //scale model
         Matrix.scaleM(sunModelMatrix, 0, modelPos.scales.x,
@@ -391,8 +392,8 @@ public class Model {
 
         //rotate
         Matrix.rotateM(modelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
-        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.y, 0f, 1f, 0f);
-        Matrix.rotateM(modelMatrix, 0, -modelPos.angles.z, 0f, 0f, 1f);
+        Matrix.rotateM(modelMatrix, 0, modelPos.angles.y, 0f, 1f, 0f);
+        Matrix.rotateM(modelMatrix, 0, modelPos.angles.z, 0f, 0f, 1f);
 
 
 

@@ -44,7 +44,7 @@ public class GLText {
         //square = new Square(globalVars, new Vector2f((float)bounds.width() / 100, (float)bounds.height() / 100), transparent);// new square, sized based on text bounds
         //rectangleModel = new RectangleModel(new PointF((float)bitmap.getWidth() / 100, (float)bitmap.getHeight() / 100),
         //        transparent, false, false);
-        rectangleModel = new RectangleModel(new PointF(size, size), transparent, false, true);
+        rectangleModel = new RectangleModel(new PointF(size, size), transparent, false, true, false);
 
         float[] texCoords = {
                 0.005f, 0.0f,  // A. left-bottom
