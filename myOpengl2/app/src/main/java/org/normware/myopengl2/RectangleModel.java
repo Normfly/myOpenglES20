@@ -382,11 +382,6 @@ public class RectangleModel {
         // Bind the default framebuffer (to render to the screen) - indicated by '0', this has been added because of shadow map FBO
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 
-        //rotate texture
-        //float lightAngle = GetAngle(globals.lightPosition[0], globals.lightPosition[2]);
-        //float cameraAngle = GetAngle(globals.cameraPosition.x, globals.cameraPosition.z);
-        //float diffAngle = lightAngle;//cameraAngle - lightAngle;
-
         // Matrix transformations
         float[] modelMatrix = new float[16];
         float[] finalMatrix = new float[16];
@@ -396,7 +391,21 @@ public class RectangleModel {
                 globals.lightPosition[0], 0, -globals.lightPosition[2],
                 0f, 1f, 0f);
 
-        Matrix.multiplyMM(finalMatrix, 0, globals.viewProjMatrix, 0, modelMatrix, 0);//projection matrix
+        float[] cameraViewMatrix = new float[16];
+        float[] perspectiveMatrix = new float[16];
+        float[] viewProjMatrix = new float[16];
+
+        //set camera position, shadow rectangle is always in screen, never off to the side
+        Matrix.setLookAtM(cameraViewMatrix, 0, 0,-globals.cameraPosition.y, globals.cameraDistance,
+                0, 0f, 0,
+                0f, 1f, 0.0f);
+
+        Matrix.perspectiveM(perspectiveMatrix, 0, 45, globals.aspectRatio, 0.1f, -100f);
+
+        // Setup perspective projection matrix
+        Matrix.multiplyMM(viewProjMatrix, 0, perspectiveMatrix, 0, cameraViewMatrix, 0);//add camera matrix to perspective
+
+        Matrix.multiplyMM(finalMatrix, 0, viewProjMatrix, 0, modelMatrix, 0);
 
         GLES20.glEnable(GLES20.GL_TEXTURE_2D);  // Enable texture
         //texture filtering

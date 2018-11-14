@@ -24,6 +24,7 @@ public class Globals extends Application {
     //camera
     //public Vector3f cameraAngles = new Vector3f(30f, 0f, 0f);
     public Vector3f cameraPosition = new Vector3f(0f, -10f, 7f);//0f, -5f, 10f);
+    public float cameraDistance = cameraPosition.z;
 
     // Lighting
     public float[] lightAmbient = {1.0f, 1.0f, 1.0f, 0.2f};//ambient light color, last number is brightness

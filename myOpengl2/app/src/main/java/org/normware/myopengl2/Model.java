@@ -298,7 +298,7 @@ public class Model {
         float[] projectionMatrix = new float[16];
         float[] finalMatrix = new float[16];
 
-        //view from light source point of view
+        //view from light source point of view, but only draw to a shadow rectangle that is seen by the camera, not off to the side
 
         //changle light position to a normalized position
         Vector3f lightPos = new Vector3f(globals.lightPosition[0], globals.lightPosition[1], globals.lightPosition[2]).GetNormal();
@@ -309,7 +309,9 @@ public class Model {
                 0f, 1f, 0f);
 
         //move model
-        Matrix.translateM(sunModelMatrix, 0, modelPos.location.x, modelPos.location.y, modelPos.location.z);
+        Matrix.translateM(sunModelMatrix, 0, modelPos.location.x - globals.cameraPosition.x,
+                                                        modelPos.location.y,
+                                                        modelPos.location.z - (globals.cameraPosition.z - globals.cameraDistance));
 
         //rotate model
         Matrix.rotateM(sunModelMatrix, 0, modelPos.angles.x, 1f, 0f, 0f);
@@ -326,7 +328,7 @@ public class Model {
         float height = (globals.glScreenSize/2) * Math.abs(lightPos.y);
         Matrix.orthoM(projectionMatrix, 0, -width, width,
                 -height, height,
-                -1f, 100f);
+                -100f, 100f);
 
         Matrix.multiplyMM(finalMatrix, 0, projectionMatrix, 0, sunModelMatrix, 0);//add camera matrix to perspective
 
