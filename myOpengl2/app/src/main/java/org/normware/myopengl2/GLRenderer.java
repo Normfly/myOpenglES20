@@ -253,6 +253,10 @@ public class GLRenderer implements Renderer {
         //draw full textured objects
         catapult.Draw(globals, LocAngScale.ZERO_ONE());
 
+        glText.DrawHUD(globals, "Use arrow", new PointF(0,0.5f));
+        glText.DrawHUD(globals, "keys and +/-", new PointF(0, 1f));
+        glText.DrawHUD(globals, "to move sun", new PointF(0, 1.5f));
+
         glText.DrawHUD(globals, testText, new PointF(0f, 0f));
 
         //collision test
@@ -332,16 +336,16 @@ public class GLRenderer implements Renderer {
 				globals.test.x += .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_UP:
-				globals.test.y += .1f;
+				globals.test.z += .1f;
 				break;
 			case KeyEvent.KEYCODE_DPAD_DOWN:
-				globals.test.y -= .1f;
-				break;
-			case 69://minus
 				globals.test.z -= .1f;
 				break;
+			case 69://minus
+				globals.test.y -= .1f;
+				break;
 			case 70://addition
-				globals.test.z += .1f;
+				globals.test.y += .1f;
 				break;
             case KeyEvent.KEYCODE_B:
                 globals.debuging = !globals.debuging;
