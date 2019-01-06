@@ -310,7 +310,7 @@ public class Model {
 
         //move model
         Matrix.translateM(sunModelMatrix, 0, modelPos.location.x - globals.cameraPosition.x,
-                                                        modelPos.location.y,
+                                                        -modelPos.location.y,
                                                         modelPos.location.z - (globals.cameraPosition.z - globals.cameraDistance));
 
         //rotate model
