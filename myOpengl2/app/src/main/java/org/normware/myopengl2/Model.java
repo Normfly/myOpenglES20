@@ -324,8 +324,8 @@ public class Model {
                 modelPos.scales.z);//scale
 
         //projection ortho matrix, glScreensize, height adjusted for how high the sun angle is
-        float width = (globals.glScreenSize/2);
-        float height = (globals.glScreenSize/2) * Math.abs(lightPos.y);
+        float width = (globals.glScreenSize);
+        float height = (globals.glScreenSize) * Math.abs(lightPos.y);
         Matrix.orthoM(projectionMatrix, 0, -width, width,
                 -height, height,
                 -100f, 100f);

@@ -139,7 +139,7 @@ public class GLRenderer implements Renderer {
 
         GenerateShadowFBO();
 
-		shadowRec.ResizeRectangle(globals.glScreenSize, globals.glScreenSize);
+		shadowRec.ResizeRectangle(globals.glScreenSize*2, globals.glScreenSize*2);//overlap beyond screen size for camera angle tilt
 	}
 
 	@Override
